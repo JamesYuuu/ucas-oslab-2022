@@ -19,6 +19,7 @@ DIR_QEMU	= $(DIR_OSLAB)/qemu
 CROSS_PREFIX	= riscv64-unknown-linux-gnu-
 CC				= $(CROSS_PREFIX)gcc
 GDB				= $(CROSS_PREFIX)gdb
+OBJDUMP   = $(CROSS_PREFIX)objdump
 QEMU			= $(DIR_QEMU)/riscv64-softmmu/qemu-system-riscv64
 
 # -----------------------------------------------------------------------
@@ -41,7 +42,7 @@ USER_ENTRYPOINT			= 0x50000000
 # UCAS-OS User Source Files
 # -----------------------------------------------------------------------
 
-SRC_USER	= test.S
+SRC_USER	= yujunda.S
 ELF_USER	= $(patsubst %.S, %, $(SRC_USER))
 
 # -----------------------------------------------------------------------
@@ -62,5 +63,8 @@ run:
 
 debug:
 	$(QEMU) $(QEMU_OPTS) $(QEMU_DEBUG_OPT)
+ 
+dump:
+	$(OBJDUMP) -S $(ELF_USER) > $(ELF_USER).txt
 
-.PHONY: all clean gdb run debug
+.PHONY: all clean gdb run debug dump
