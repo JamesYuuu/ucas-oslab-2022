@@ -72,6 +72,33 @@ int main(void)
     bios_putstr("Hello OS!\n\r");
     bios_putstr(buf);
 
+    // Add read and print support for [p1-task2]
+    // If there is no input, bios_getchar() will return -1
+    /*
+    int input,index;
+    char input_str[VERSION_BUF];
+    while (1)
+    {
+        input=bios_getchar();
+        if (input==-1) 
+            continue;
+        else if (input==13) 
+        {
+            bios_putstr("\n\r");
+            bios_putstr(input_str);
+            bios_putstr("\n\r");
+            for (int i=0;i<=index;i++)
+                input_str[i]=0;
+            index=0;
+        }
+        else
+        {
+            input_str[index++]=input;
+            bios_putchar(input);
+        }
+    }
+    */
+
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
 
