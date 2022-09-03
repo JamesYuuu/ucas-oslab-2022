@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <elf.h>
 
 #define IMAGE_FILE "./image"
 #define ARGS "[--extended] [--vm] <bootblock> <executable-file> ..."
@@ -15,6 +14,8 @@
 #define OS_SIZE_LOC (BOOT_LOADER_SIG_OFFSET - 2)
 #define BOOT_LOADER_SIG_1 0x55
 #define BOOT_LOADER_SIG_2 0xaa
+
+#define BLOCK_NUM 15    // define block_num for [p1-task3]
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
@@ -126,9 +127,12 @@ static void create_image(int nfiles, char *files[])
          *  occupies the same number of sectors
          * 2. [p1-task4] only padding bootblock is allowed!
          */
+        // padding bootblock for task4
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
         }
+        // padding every app program for task3
+        else write_padding(img, &phyaddr, (1+fidx*BLOCK_NUM)*SECTOR_SIZE);
 
         fclose(fp);
         files++;
@@ -200,7 +204,7 @@ static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr)
 static void write_padding(FILE *img, int *phyaddr, int new_phyaddr)
 {
     if (options.extended == 1 && *phyaddr < new_phyaddr) {
-        printf("\t\twrite 0x%04lx bytes for padding\n", new_phyaddr - *phyaddr);
+        printf("\t\twrite 0x%04x bytes for padding\n", new_phyaddr - *phyaddr);
     }
 
     while (*phyaddr < new_phyaddr) {
@@ -214,6 +218,16 @@ static void write_img_info(int nbytes_kern, task_info_t *taskinfo,
 {
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
+
+    // writing os_size into the last four byte of the first sector
+    fseek(img,OS_SIZE_LOC,SEEK_SET);
+    //int os_size=nbytes_kern/512+1;
+    int os_size=BLOCK_NUM;
+    fwrite(&os_size,2,1,img);
+
+    // writing tasknum into the last sector
+    fseek(img,0,SEEK_END);
+    fwrite(&tasknum,2,1,img);
 }
 
 /* print an error message and exit */

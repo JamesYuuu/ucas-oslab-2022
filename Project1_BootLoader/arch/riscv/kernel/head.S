@@ -10,26 +10,26 @@
 
 .section ".entry_function","ax"
 ENTRY(_start)
-  /* Mask all interrupts */
-  csrw CSR_SIE, zero
-  csrw CSR_SIP, zero
+    /* Mask all interrupts */
+    csrw CSR_SIE, zero
+    csrw CSR_SIP, zero
 
-  /* TODO: [p1-task2] clear BSS for flat non-ELF images */
-  // check riscv.lds for __bss_start and __BSS_END__
-  la s1,__bss_start
-  la s2,__BSS_END__
-  bge s1,s2,end
+    /* TODO: [p1-task2] clear BSS for flat non-ELF images */
+    // check riscv.lds for __bss_start and __BSS_END__
+    la s1,__bss_start
+    la s2,__BSS_END__
+    bge s1,s2,end
   
 
 end:
-  /* TODO: [p1-task2] setup C environment */
-  li sp,KERNEL_STACK
-  j main
+    /* TODO: [p1-task2] setup C environment */
+    li sp,KERNEL_STACK
+    j main
 
 
 loop:
-  sw zero,(s1)
-  addi s1,s1,4
-  blt s1,s2,loop
+    sw zero,(s1)
+    addi s1,s1,4
+    blt s1,s2,loop
 
 END(_start)

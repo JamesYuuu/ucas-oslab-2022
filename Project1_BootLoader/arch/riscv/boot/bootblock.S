@@ -31,7 +31,7 @@ main:
 	
 	// TODO: [p1-task2] call BIOS to read kernel in SD card
 	li a0,BIOS_SDREAD
-	la a1,kernel		//mem_addressh
+	la a1,kernel		//mem_address
 	la a4,os_size_loc
 	lh a2,(a4)			//num_of_blocks
 	li a3,1				//block_id

@@ -74,33 +74,45 @@ int main(void)
 
     // Add read and print support for [p1-task2]
     // If there is no input, bios_getchar() will return -1
+    // The code below outputs what it reads
     /*
-    int input,index;
-    char input_str[VERSION_BUF];
+    int input;
     while (1)
     {
         input=bios_getchar();
         if (input==-1) 
             continue;
-        else if (input==13) 
-        {
-            bios_putstr("\n\r");
-            bios_putstr(input_str);
-            bios_putstr("\n\r");
-            for (int i=0;i<=index;i++)
-                input_str[i]=0;
-            index=0;
-        }
+        else if (input==13)         // when input is enter
+            bios_putstr("\n\r");  
         else
-        {
-            input_str[index++]=input;
             bios_putchar(input);
-        }
     }
     */
 
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
+    // The code below load tasks by task id for [p1-task3]
+    int input,task_id,current_address;
+    task_id=0;
+    while (1)
+    {
+        input=bios_getchar();
+        if (input==-1) 
+            continue;
+        else if (input==13)         // when input is enter
+        {
+            bios_putstr("\n\r");  
+            current_address=load_task_img(task_id);
+            (*(void(*)())current_address)();    //execute a pointer point to a function address
+            task_id=0;
+        }
+        else
+        {
+            bios_putchar(input);
+            task_id=task_id*10+input-'0';
+        }
+    }
+    
 
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
