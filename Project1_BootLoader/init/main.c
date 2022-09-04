@@ -92,7 +92,8 @@ int main(void)
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
     // The code below load tasks by task id for [p1-task3]
-    int input,task_id,current_address;
+    int input,task_id;
+    long current_address;
     task_id=0;
     while (1)
     {
@@ -101,9 +102,13 @@ int main(void)
             continue;
         else if (input==13)         // when input is enter
         {
-            bios_putstr("\n\r");  
-            current_address=load_task_img(task_id);
-            (*(void(*)())current_address)();    //execute a pointer point to a function address
+            bios_putstr("\n\r");
+            if (task_id>=1 && task_id<=4)
+            {
+                current_address=load_task_img(task_id);
+                (*(void(*)())current_address)();    //execute a pointer point to a function address
+            }
+            else bios_putstr("Invalid task id!\n\r");
             task_id=0;
         }
         else

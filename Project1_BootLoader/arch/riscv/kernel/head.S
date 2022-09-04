@@ -19,13 +19,11 @@ ENTRY(_start)
     la s1,__bss_start
     la s2,__BSS_END__
     bge s1,s2,end
-  
 
 end:
     /* TODO: [p1-task2] setup C environment */
     li sp,KERNEL_STACK
-    j main
-
+    call main
 
 loop:
     sw zero,(s1)

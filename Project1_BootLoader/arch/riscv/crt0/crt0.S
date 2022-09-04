@@ -12,12 +12,15 @@ ENTRY(_start)
 
 end:
     /* TODO: [p1-task3] enter main function */
-    li sp,KERNEL_STACK
+    addi sp,sp,-16
+    sw ra,12(sp)
     call main
 
     /* TODO: [p1-task3] finish task and return to the kernel */
-	la a0,KERNEL_ADDRESS
-	jr a0
+    lw ra,12(sp)
+    addi sp,sp,16
+    ret
+
     /* NOTE: You need to replace this with new mechanism in p3-task2! */
 
 // while(1) loop, unreachable here

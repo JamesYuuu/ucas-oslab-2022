@@ -16,13 +16,10 @@ uint64_t load_task_img(int task_id)
      */
     // The code below load task from image via task id for [p1-task3]
 
-    bios_putstr("Loading task ");
-    bios_putchar(task_id+'0');
-    bios_putstr("...\n\r");
     unsigned int current_address=TASK_ADDRESS+0x10000*task_id;
     unsigned int block_id=1+task_id*BLOCK_NUM;
     
     bios_sdread(current_address,BLOCK_NUM,block_id);
 
-    return current_address;
+    return (long)current_address;
 }
