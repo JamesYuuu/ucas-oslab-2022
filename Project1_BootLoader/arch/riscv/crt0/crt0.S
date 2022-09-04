@@ -5,7 +5,12 @@ ENTRY(_start)
     /* TODO: [p1-task3] setup C runtime environment for the user program */
     la s1,__bss_start
     la s2,__BSS_END__
-    bge s1,s2,end
+    bgt s1,s2,end
+
+loop:
+    sw zero,(s1)
+    addi s1,s1,4
+    ble s1,s2,loop
 
 end:
     /* TODO: [p1-task3] enter main function */
@@ -21,9 +26,10 @@ end:
     /* NOTE: You need to replace this with new mechanism in p3-task2! */
 
 // while(1) loop, unreachable here
+/*
 loop:
-    sw zero,(s1)
-    addi s1,s2,4
-    blt s1,s2,loop
+    wfi
+    j loop
+*/
 
 END(_start)

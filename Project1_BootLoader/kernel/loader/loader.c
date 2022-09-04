@@ -15,7 +15,7 @@ uint64_t load_task_img(char *taskname, int task_num)
      */
     // The code below load task from image via task id for [p1-task3]
     /*
-    unsigned int current_address=TASK_MEM_BASE+TASK_SIZE*task_id;
+    unsigned int current_address=TASK_MEM_BASE+TASK_SIZE*(task_id-1);
     unsigned int block_id=1+task_id*BLOCK_NUM; 
     bios_sdread(current_address,BLOCK_NUM,block_id);
     return (uint64_t)current_address;
@@ -25,27 +25,19 @@ uint64_t load_task_img(char *taskname, int task_num)
     {
         if (strcmp(taskname,tasks[i].task_name)==0)
         {
-            // The code below copy the app to the original place
-            /*
+            // The code below copy the app to the original place          
             bios_sdread(tasks[i].entry_point,tasks[i].block_num,tasks[i].block_id);
+            return tasks[i].entry_point+tasks[i].offset;
+
+            // The code below copy the app to the original place if needed
+            /*
             uint8_t *dest=(uint8_t*)tasks[i].entry_point;
             uint8_t *src=(uint8_t*)(tasks[i].entry_point+tasks[i].offset);
             uint32_t len=tasks[i].task_size;
             memcpy(dest,src,len);
-            // padding
-            uint8_t *final=(uint8_t*)(tasks[i].entry_point+tasks[i].task_size);
-            bzero(final,tasks[i].block_num*512-tasks[i].task_size);
             return tasks[i].entry_point;
-            */
-
-            // without copying back, it still works
-            bios_sdread(tasks[i].entry_point,tasks[i].block_num,tasks[i].block_id);
-
-            // padding the unused memory into 0, otherwise check .bss will fail
-            uint8_t *dest=(uint8_t*)(tasks[i].entry_point+tasks[i].offset+tasks[i].task_size);
-            bzero(dest,tasks[i].block_num*512-tasks[i].task_size-tasks[i].offset);
-            
-            return tasks[i].entry_point+tasks[i].offset;
+            */        
         }
     }
+    return -1;
 }

@@ -18,16 +18,16 @@ ENTRY(_start)
     // check riscv.lds for __bss_start and __BSS_END__
     la s1,__bss_start
     la s2,__BSS_END__
-    bge s1,s2,end
+    bgt s1,s2,end
+
+loop:
+    sw zero,(s1)
+    addi s1,s1,4
+    ble s1,s2,loop
 
 end:
     /* TODO: [p1-task2] setup C environment */
     li sp,KERNEL_STACK
     call main
-
-loop:
-    sw zero,(s1)
-    addi s1,s1,4
-    blt s1,s2,loop
 
 END(_start)
