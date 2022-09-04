@@ -8,8 +8,12 @@
 
 #define VERSION_BUF 50
 
+#define TASK_ADDRESS 0x52100000
+
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
+
+int task_num;
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
@@ -40,6 +44,18 @@ static void init_task_info(void)
 {
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
+    bios_sdread(TASK_ADDRESS, 1, 0);
+    task_num=*((int*)(TASK_ADDRESS+512-20));
+    int block_id=*((int*)(TASK_ADDRESS+512-16));
+    int offset=*((int*)(TASK_ADDRESS+512-12));
+    int block_num=*((int*)(TASK_ADDRESS+512-8));
+    
+    bios_sdread(TASK_ADDRESS, block_num, block_id);
+    for (int i=0;i<task_num;i++)
+    {
+        tasks[i]=*((task_info_t*)(unsigned long)(TASK_ADDRESS+offset));
+        offset+=sizeof(task_info_t);
+    }
 }
 
 int main(void)
@@ -51,7 +67,7 @@ int main(void)
     init_bios();
 
     // Init task information (〃'▽'〃)
-    init_task_info();
+     init_task_info();
 
     // Output 'Hello OS!', bss check result and OS version
     char output_str[] = "bss check: _ version: _\n\r";
@@ -92,6 +108,7 @@ int main(void)
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
     // The code below load tasks by task id for [p1-task3]
+    /*
     int input,task_id;
     long current_address;
     task_id=0;
@@ -103,7 +120,7 @@ int main(void)
         else if (input==13)         // when input is enter
         {
             bios_putstr("\n\r");
-            if (task_id>=1 && task_id<=4)
+            if (task_id>=1 && task_id<=task_num)
             {
                 current_address=load_task_img(task_id);
                 (*(void(*)())current_address)();    //execute a pointer point to a function address
@@ -115,6 +132,47 @@ int main(void)
         {
             bios_putchar(input);
             task_id=task_id*10+input-'0';
+        }
+    }
+    */
+    
+    char task_name[NAME_MAXNUM];
+    int input,len;
+    unsigned long current_address;
+    while(1)
+    {
+        input=bios_getchar();
+        if (input==-1) 
+            continue;
+        else if (input==13)
+        {
+            if (len==0)
+            {
+                bios_putstr("Please input task name\n\r");
+                continue;
+            }
+            bios_putstr("\n\r");
+            current_address=load_task_img(task_name,task_num);
+            if (current_address==-1)
+                bios_putstr("Invalid task name!\n\r");
+            else 
+                (*(void(*)())current_address)();
+            for (int i=0;i<=len;i++)
+                task_name[i]=0;
+            len=0;
+        }
+        else 
+        {
+            bios_putchar(input);
+            task_name[len]=input;
+            len++;
+            if (len>=NAME_MAXNUM)
+            {
+                bios_putstr("Task name too long!\n\r");
+                for (int i=0;i<=len;i++)
+                    task_name[i]=0;
+                len=0;
+            }
         }
     }
     

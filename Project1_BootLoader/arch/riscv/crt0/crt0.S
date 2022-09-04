@@ -1,8 +1,5 @@
 #include <asm.h>
 
-#define KERNEL_STACK		0x50500000
-#define KERNEL_ADDRESS      0x50201000
-
 ENTRY(_start)
 
     /* TODO: [p1-task3] setup C runtime environment for the user program */

@@ -20,8 +20,14 @@
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
 /* TODO: [p1-task4] design your own task_info_t */
+#define NAME_MAXNUM 16
 typedef struct {
-
+    char task_name[NAME_MAXNUM];
+    uint64_t entry_point;
+    uint32_t block_num;
+    uint32_t block_id;
+    uint32_t offset;
+    uint32_t task_size;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -44,7 +50,7 @@ static uint32_t get_memsz(Elf64_Phdr phdr);
 static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr);
 static void write_padding(FILE *img, int *phyaddr, int new_phyaddr);
 static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
-                           short tasknum, FILE *img);
+                           short tasknum, FILE *img ,int info_address);
 
 int main(int argc, char **argv)
 {
@@ -88,12 +94,17 @@ static void create_image(int nfiles, char *files[])
     Elf64_Ehdr ehdr;
     Elf64_Phdr phdr;
 
+    // new var task_size for task4;
+    int task_size;
+
     /* open the image file */
     img = fopen(IMAGE_FILE, "w");
     assert(img != NULL);
 
     /* for each input file */
     for (int fidx = 0; fidx < nfiles; ++fidx) {
+
+        task_size=phyaddr;
 
         int taskidx = fidx - 2;
 
@@ -132,13 +143,23 @@ static void create_image(int nfiles, char *files[])
             write_padding(img, &phyaddr, SECTOR_SIZE);
         }
         // padding every app program for task3
-        else write_padding(img, &phyaddr, (1+fidx*BLOCK_NUM)*SECTOR_SIZE);
+        //  else write_padding(img, &phyaddr, (1+fidx*BLOCK_NUM)*SECTOR_SIZE);
+        
+        // adding task_info_t for task4
+        else if (strcmp(*files,"main")!=0)
+        {
+            strcpy(taskinfo[taskidx].task_name, *files);
+            taskinfo[taskidx].entry_point = ehdr.e_entry;
+            taskinfo[taskidx].offset = task_size%512;
+            taskinfo[taskidx].block_num = (phyaddr-1)/512+1 - task_size/512;
+            taskinfo[taskidx].block_id = task_size/512;
+            taskinfo[taskidx].task_size = phyaddr-task_size;
+        }
 
         fclose(fp);
         files++;
     }
-    write_img_info(nbytes_kernel, taskinfo, tasknum, img);
-
+    write_img_info(nbytes_kernel, taskinfo, tasknum, img , phyaddr);
     fclose(img);
 }
 
@@ -214,27 +235,48 @@ static void write_padding(FILE *img, int *phyaddr, int new_phyaddr)
 }
 
 static void write_img_info(int nbytes_kern, task_info_t *taskinfo,
-                           short tasknum, FILE * img)
+                           short tasknum, FILE * img , int info_address)
 {
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
 
+    //code below are written for p1-task3
+    /*
     // writing os_size into the last four byte of the first sector
     fseek(img,OS_SIZE_LOC,SEEK_SET);
     //int os_size=nbytes_kern/512+1;
     int os_size=BLOCK_NUM;
     fwrite(&os_size,2,1,img);
-
     // writing tasknum into the last sector
-    fseek(img,0,SEEK_END);
     fwrite(&tasknum,2,1,img);
+    */
+
+    //code below are written for p1-task4
+    // write app_info before OS_SIZE_LOC for 16 bytes info
+    fseek(img,OS_SIZE_LOC-16,SEEK_SET);
+    int block_id=info_address/512;
+    int offset=info_address%512;
+    int block_num=(info_address+sizeof(task_info_t)*tasknum-1)/512+1-block_id;
+    fwrite(&tasknum,sizeof(int),1,img);
+    fwrite(&block_id,sizeof(int),1,img);
+    fwrite(&offset,sizeof(int),1,img);
+    fwrite(&block_num,sizeof(int),1,img);
+    
+    // write os_size
+    int os_size=(nbytes_kern-1)/512+1;
+    fwrite(&os_size,2,1,img);
+    
+    // write app_info
+    fseek(img,0,SEEK_END);
+    for (int i=0;i<tasknum;i++)
+        fwrite(&taskinfo[i],sizeof(task_info_t),1,img);
+
 }
 
 /* print an error message and exit */
 static void error(char *fmt, ...)
 {
     va_list args;
-
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);
     va_end(args);

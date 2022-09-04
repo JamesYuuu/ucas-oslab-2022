@@ -9,6 +9,9 @@
 // BIOS function entry (jump here to use BIOS APIs)
 .equ bios_func_entry, 0x50150000
 
+// App info address (store app info here)
+.equ app_info, 0x52100000
+
 .text
 .global main
 
