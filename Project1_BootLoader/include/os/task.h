@@ -12,12 +12,9 @@
 typedef struct {
     char task_name[NAME_MAXNUM];
     uint64_t entry_point;
-    uint32_t block_num;
-    uint32_t block_id;
-    uint32_t offset;
-    uint32_t task_size;
+    uint32_t start_addr;
+    uint32_t end_addr;
 } task_info_t;
-
 extern task_info_t tasks[TASK_MAXNUM];
 
 #endif

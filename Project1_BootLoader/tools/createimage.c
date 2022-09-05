@@ -26,10 +26,8 @@
 typedef struct {
     char task_name[NAME_MAXNUM];
     uint64_t entry_point;
-    uint32_t block_num;
-    uint32_t block_id;
-    uint32_t offset;
-    uint32_t task_size;
+    uint32_t start_addr;
+    uint32_t end_addr;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -46,9 +44,14 @@ static void create_image(int nfiles, char *files[]);
 static void error(char *fmt, ...);
 static void read_ehdr(Elf64_Ehdr *ehdr, FILE *fp);
 static void read_phdr(Elf64_Phdr *phdr, FILE *fp, int ph, Elf64_Ehdr ehdr);
+
+// annotate the unused function to avoid warning
+/*
 static uint64_t get_entrypoint(Elf64_Ehdr ehdr);
-static uint32_t get_filesz(Elf64_Phdr phdr);
 static uint32_t get_memsz(Elf64_Phdr phdr);
+*/
+
+static uint32_t get_filesz(Elf64_Phdr phdr);
 static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr);
 static void write_padding(FILE *img, int *phyaddr, int new_phyaddr);
 static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
@@ -154,10 +157,8 @@ static void create_image(int nfiles, char *files[])
         {
             strcpy(taskinfo[taskidx].task_name, *files);
             taskinfo[taskidx].entry_point = ehdr.e_entry;
-            taskinfo[taskidx].offset = pre_addr%512;
-            taskinfo[taskidx].block_num = (phyaddr-1)/512+1 - pre_addr/512;
-            taskinfo[taskidx].block_id = pre_addr/512;
-            taskinfo[taskidx].task_size = phyaddr-pre_addr;
+            taskinfo[taskidx].start_addr=pre_addr;
+            taskinfo[taskidx].end_addr=phyaddr;
         }
 
         fclose(fp);
@@ -199,19 +200,21 @@ static void read_phdr(Elf64_Phdr * phdr, FILE * fp, int ph,
     }
 }
 
+/*
 static uint64_t get_entrypoint(Elf64_Ehdr ehdr)
 {
     return ehdr.e_entry;
 }
 
-static uint32_t get_filesz(Elf64_Phdr phdr)
-{
-    return phdr.p_filesz;
-}
-
 static uint32_t get_memsz(Elf64_Phdr phdr)
 {
     return phdr.p_memsz;
+}
+*/
+
+static uint32_t get_filesz(Elf64_Phdr phdr)
+{
+    return phdr.p_filesz;
 }
 
 static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr)
@@ -311,7 +314,6 @@ static void write_bat_info(FILE * img)
 {
     FILE *fp=fopen(BAT_FILE,"r");
     char c;
-    int i=0;
     while ((c=fgetc(fp))!=EOF)
         fputc(c,img);
     fputc('\n',img);

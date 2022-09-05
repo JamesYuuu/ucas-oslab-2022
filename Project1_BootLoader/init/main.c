@@ -64,7 +64,7 @@ static void init_task_info(void)
     }
 
     // init bat_file for [p1-task5]
-    bat_file=(char*)(TASK_ADDRESS+offset);
+    bat_file=(char*)(unsigned long)(TASK_ADDRESS+offset);
 }
 
 int main(void)
