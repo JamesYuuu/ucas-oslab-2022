@@ -19,6 +19,8 @@
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
+#define BAT_FILE "bat.txt" // define bat_file for [p1-task5]
+
 /* TODO: [p1-task4] design your own task_info_t */
 #define NAME_MAXNUM 16
 typedef struct {
@@ -51,6 +53,8 @@ static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr);
 static void write_padding(FILE *img, int *phyaddr, int new_phyaddr);
 static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
                            short tasknum, FILE *img ,int info_address);
+//write_bat_info for [p1-task5]
+static void write_bat_info(FILE *img);
 
 int main(int argc, char **argv)
 {
@@ -94,8 +98,8 @@ static void create_image(int nfiles, char *files[])
     Elf64_Ehdr ehdr;
     Elf64_Phdr phdr;
 
-    // new var task_size for task4;
-    int task_size;
+    // new var pre_addr for task4;
+    int pre_addr;
 
     /* open the image file */
     img = fopen(IMAGE_FILE, "w");
@@ -104,7 +108,7 @@ static void create_image(int nfiles, char *files[])
     /* for each input file */
     for (int fidx = 0; fidx < nfiles; ++fidx) {
 
-        task_size=phyaddr;
+        pre_addr=phyaddr;
 
         int taskidx = fidx - 2;
 
@@ -150,16 +154,20 @@ static void create_image(int nfiles, char *files[])
         {
             strcpy(taskinfo[taskidx].task_name, *files);
             taskinfo[taskidx].entry_point = ehdr.e_entry;
-            taskinfo[taskidx].offset = task_size%512;
-            taskinfo[taskidx].block_num = (phyaddr-1)/512+1 - task_size/512;
-            taskinfo[taskidx].block_id = task_size/512;
-            taskinfo[taskidx].task_size = phyaddr-task_size;
+            taskinfo[taskidx].offset = pre_addr%512;
+            taskinfo[taskidx].block_num = (phyaddr-1)/512+1 - pre_addr/512;
+            taskinfo[taskidx].block_id = pre_addr/512;
+            taskinfo[taskidx].task_size = phyaddr-pre_addr;
         }
 
         fclose(fp);
         files++;
     }
     write_img_info(nbytes_kernel, taskinfo, tasknum, img , phyaddr);
+
+    // write bat info for [p1-task5]
+    write_bat_info(img);
+
     fclose(img);
 }
 
@@ -251,9 +259,20 @@ static void write_img_info(int nbytes_kern, task_info_t *taskinfo,
     fwrite(&tasknum,2,1,img);
     */
 
-    //code below are written for p1-task4
+    // write bat_info if needed for [p1-task5]
+    FILE *fp=fopen(BAT_FILE,"r");
+    if (fp!=NULL)
+    {
+        fseek(fp,0,SEEK_END);
+        long bat_size=ftell(fp)+1;  //add '\n' at the end of bat file
+        fseek(img,OS_SIZE_LOC-24,SEEK_SET);
+        fwrite(&bat_size,sizeof(long),1,img);
+    }
+    else 
+        fseek(img,OS_SIZE_LOC-16,SEEK_SET);
+    // code below are written for p1-task4
     // write app_info before OS_SIZE_LOC for 16 bytes info
-    fseek(img,OS_SIZE_LOC-16,SEEK_SET);
+    
     int block_id=info_address/512;
     int offset=info_address%512;
     int block_num=(info_address+sizeof(task_info_t)*tasknum-1)/512+1-block_id;
@@ -288,7 +307,12 @@ static void error(char *fmt, ...)
 
 // writing bat_info for [p1-task5]
 
-static void write_bat_info(char * bat_name, FILE * img)
+static void write_bat_info(FILE * img)
 {
-
+    FILE *fp=fopen(BAT_FILE,"r");
+    char c;
+    int i=0;
+    while ((c=fgetc(fp))!=EOF)
+        fputc(c,img);
+    fputc('\n',img);
 }

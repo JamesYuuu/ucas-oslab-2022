@@ -24,19 +24,15 @@ uint64_t load_task_img(char *taskname, int task_num)
     for (int i=0;i<task_num;i++)
     {
         if (strcmp(taskname,tasks[i].task_name)==0)
-        {
-            // The code below copy the app to the original place          
+        {         
             bios_sdread(tasks[i].entry_point,tasks[i].block_num,tasks[i].block_id);
-            return tasks[i].entry_point+tasks[i].offset;
-
+            
             // The code below copy the app to the original place if needed
-            /*
             uint8_t *dest=(uint8_t*)tasks[i].entry_point;
             uint8_t *src=(uint8_t*)(tasks[i].entry_point+tasks[i].offset);
             uint32_t len=tasks[i].task_size;
             memcpy(dest,src,len);
-            return tasks[i].entry_point;
-            */        
+            return tasks[i].entry_point;     
         }
     }
     return -1;

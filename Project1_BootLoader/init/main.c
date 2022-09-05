@@ -15,7 +15,11 @@ char buf[VERSION_BUF];
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
-int task_num;
+int task_num; //task_num for [p1-task4]
+
+// bat_file info for [p1-task5]
+long bat_size;
+char *bat_file;
 
 static int bss_check(void)
 {
@@ -48,13 +52,19 @@ static void init_task_info(void)
     int block_id=*((int*)(TASK_ADDRESS+512-16));
     int offset=*((int*)(TASK_ADDRESS+512-12));
     int block_num=*((int*)(TASK_ADDRESS+512-8));
-    
+
+    // get bat_size for [p1-task5]
+    bat_size=*((long*)(TASK_ADDRESS+512-28));
+
     bios_sdread(TASK_ADDRESS, block_num, block_id);
     for (int i=0;i<task_num;i++)
     {
         tasks[i]=*((task_info_t*)(unsigned long)(TASK_ADDRESS+offset));
         offset+=sizeof(task_info_t);
     }
+
+    // init bat_file for [p1-task5]
+    bat_file=(char*)(TASK_ADDRESS+offset);
 }
 
 int main(void)
@@ -97,7 +107,7 @@ int main(void)
         input=bios_getchar();
         if (input==-1) 
             continue;
-        else if (input==13)         // when input is enter
+        else if (input=='\n')         // when input is enter
             bios_putstr("\n\r");  
         else
             bios_putchar(input);
@@ -116,7 +126,7 @@ int main(void)
         input=bios_getchar();
         if (input==-1) 
             continue;
-        else if (input==13)         // when input is enter
+        else if (input=='\n')         // when input is enter
         {
             bios_putstr("\n\r");
             if (task_id>=1 && task_id<=task_num)
@@ -134,7 +144,7 @@ int main(void)
         }
     }
     */
-    
+    /*
     char task_name[NAME_MAXNUM];
     int input,len;
     unsigned long current_address;
@@ -143,7 +153,7 @@ int main(void)
         input=bios_getchar();
         if (input==-1) 
             continue;
-        else if (input==13)
+        else if (input=='\n')
         {
             if (len==0)
             {
@@ -174,8 +184,55 @@ int main(void)
             }
         }
     }
-    
+    */
 
+    // running bat file for [p1-task5]
+    char task_name[NAME_MAXNUM];
+    int len;
+    unsigned long current_address;
+    bios_putstr("\n\rStart executing bat file!\n\r");
+    while (bat_size-->=0)
+    {
+        if (*bat_file=='\n')
+        {
+            if (len==0)
+            {
+                bios_putstr("Please input task name\n\r");
+                continue;
+            }
+            current_address=load_task_img(task_name,task_num);
+            if (current_address==-1)
+                bios_putstr("Invalid task name!\n\r");
+            else 
+            {
+                bios_putstr("Executing task ");
+                bios_putstr(task_name);
+                bios_putstr("...\n\r");    
+                (*(void(*)())current_address)();
+                bios_putstr("\n\r");
+            }
+            for (int i=0;i<=len;i++)
+                task_name[i]=0;
+            len=0;            
+        }
+        else
+        {
+            task_name[len]=*bat_file;
+            len++;
+            if (len>=NAME_MAXNUM)
+            {
+                bios_putstr("Task name too long!\n\r");
+
+                bios_putstr(task_name);
+
+                for (int i=0;i<=len;i++)
+                    task_name[i]=0;
+                len=0;
+            }
+        }
+        bat_file++;
+    }
+    bios_putstr("Finish executing bat file!\n\r");
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
