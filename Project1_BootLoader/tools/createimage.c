@@ -285,3 +285,10 @@ static void error(char *fmt, ...)
     }
     exit(EXIT_FAILURE);
 }
+
+// writing bat_info for [p1-task5]
+
+static void write_bat_info(char * bat_name, FILE * img)
+{
+
+}

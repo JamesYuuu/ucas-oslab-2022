@@ -13,10 +13,9 @@
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
 
-int task_num;
-
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
+int task_num;
 
 static int bss_check(void)
 {
@@ -67,7 +66,7 @@ int main(void)
     init_bios();
 
     // Init task information (〃'▽'〃)
-     init_task_info();
+    init_task_info();
 
     // Output 'Hello OS!', bss check result and OS version
     char output_str[] = "bss check: _ version: _\n\r";

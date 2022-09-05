@@ -5,12 +5,12 @@ ENTRY(_start)
     /* TODO: [p1-task3] setup C runtime environment for the user program */
     la s1,__bss_start
     la s2,__BSS_END__
-    bgt s1,s2,end
+    bge s1,s2,end
 
 loop:
     sw zero,(s1)
     addi s1,s1,4
-    ble s1,s2,loop
+    blt s1,s2,loop
 
 end:
     /* TODO: [p1-task3] enter main function */
