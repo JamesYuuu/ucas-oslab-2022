@@ -4,7 +4,7 @@
 
 在bootblock.S中，通过寄存器a0,a1,a2...传递参数，调用BIOS API，实现在屏幕上打印字符串。
 
-```assembly
+```asm
     li a0,BIOS_PUTSTR
     la a1,msg
     call bios_func_entry
@@ -14,25 +14,25 @@
 
 在bootblock.S中，将kernel拷贝至内存中，kernel的大小存放在os_size_loc所在地址中。
 
-```assembly
+```asm
     li a0,BIOS_SDREAD
-	la a1,kernel		//mem_address
-	la a4,os_size_loc
-	lh a2,(a4)			//num_of_blocks
-	li a3,1				//block_id
-	call bios_func_entry
+    la a1,kernel        //mem_address
+    la a4,os_size_loc
+    lh a2,(a4)          //num_of_blocks
+    li a3,1             //block_id
+    call bios_func_entry
 ```
 
 跳转到kernel的main函数的入口地址，执行kernel。
 
-```assembly
+```asm
     la a0,kernel
     jr a0
 ```
 
 在head.S文件中，清空bss段，设置栈帧，为kernel的运行做好准备。其中bss的起始地址和结束地址均通过链接器脚本riscv.lds传递。
 
-```assembly
+```asm
     la s1,__bss_start
     la s2,__BSS_END__
     bge s1,s2,end
@@ -113,7 +113,7 @@ uint64_t load_task_img(int task_id)
 
 在crt0.S中为用户程序函数准备C的运行时环境，即清空bss段，设置栈帧。并在用户程序完成后，回收栈帧，返回main函数。
 
-```assembly
+```asm
     // clear bss segment
     la s1,__bss_start
     la s2,__BSS_END__
