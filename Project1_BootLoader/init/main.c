@@ -188,7 +188,9 @@ int main(void)
 
     // running bat file for [p1-task5]
     char task_name[NAME_MAXNUM];
-    int len;
+    for (int i=0;i<=NAME_MAXNUM;i++)
+        task_name[i]=0;
+    int len=0;
     unsigned long current_address;
     bios_putstr("\n\rStart executing bat file!\n\r");
     while (bat_size-->=0)
@@ -222,9 +224,6 @@ int main(void)
             if (len>=NAME_MAXNUM)
             {
                 bios_putstr("Task name too long!\n\r");
-
-                bios_putstr(task_name);
-
                 for (int i=0;i<=len;i++)
                     task_name[i]=0;
                 len=0;
