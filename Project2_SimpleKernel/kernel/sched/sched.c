@@ -36,12 +36,14 @@ void do_scheduler(void)
     list_node_t *prev_list=ready_queue.prev;        //ready_queue.prev is the first node of the queue
     list_del(prev_list);
     current_running=(pcb_t*)((int)prev_list-2*sizeof(reg_t));
-    if (prev_running->pid!=0)                       //make sure the kernel stays outside the ready_queue
+    current_running->status = TASK_RUNNING;
+    if (prev_running->pid!=0 && prev_running->status==TASK_RUNNING)  //make sure the kernel stays outside the ready_queue
     {
         prev_running->status=TASK_READY;
         list_add(&ready_queue,&prev_running->list); //add the prev_running to the end of the queue
     }
-
+    
+    //printl("current_running.pid:%d,current_running.status:%d\n",current_running->pid,current_running->status);
     // TODO: [p2-task1] switch_to current_running
     switch_to(prev_running,current_running);
 
@@ -59,9 +61,22 @@ void do_sleep(uint32_t sleep_time)
 void do_block(list_node_t *pcb_node, list_head *queue)
 {
     // TODO: [p2-task2] block the pcb task into the block queue
+    list_add(queue,pcb_node);
+    pcb_t *pcb=(pcb_t*)((int)pcb_node-2*sizeof(reg_t));
+    pcb->status=TASK_BLOCKED;
+
+    //printl("pcb.pid:%d,pcb.status:%d BLOCKED\n",current_running->pid,current_running->status);
+    do_scheduler();
 }
 
 void do_unblock(list_node_t *pcb_node)
 {
     // TODO: [p2-task2] unblock the `pcb` from the block queue
+    list_del(pcb_node);
+    list_add(&ready_queue,pcb_node);
+    pcb_t *pcb=(pcb_t*)((int)pcb_node-2*sizeof(reg_t));
+    pcb->status=TASK_READY;
+
+    //printl("pcb.pid:%d,pcb.status:%d RELEASED ready_queue.next:0x%x\n",current_running->pid,current_running->status,ready_queue.next);
+    do_scheduler();
 }

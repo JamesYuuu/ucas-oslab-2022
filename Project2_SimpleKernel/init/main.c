@@ -86,7 +86,6 @@ static void init_task_info(void)
         load_task_img(tasks[i].task_name,task_num);
         offset+=sizeof(task_info_t);
     }
-
 }
 
 static void init_pcb_stack(
