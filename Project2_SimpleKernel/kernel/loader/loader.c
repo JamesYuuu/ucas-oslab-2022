@@ -6,7 +6,7 @@
 #define BLOCK_NUM       15
 
 //uint64_t load_task_img(int task_id)
-uint64_t load_task_img(char *taskname, int task_num)
+uint64_t load_task_img(char *taskname, short task_num)
 {
     /**
      * TODO:
@@ -14,7 +14,7 @@ uint64_t load_task_img(char *taskname, int task_num)
      * 2. [p1-task4] load task via task name, thus the arg should be 'char *taskname'
      */
 
-    for (int i=0;i<task_num;i++)
+    for (short i=0;i<task_num;i++)
     {
         if (strcmp(taskname,tasks[i].task_name)==0)
         {   

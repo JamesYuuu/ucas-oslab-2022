@@ -30,9 +30,20 @@ void do_scheduler(void)
 
 
     // TODO: [p2-task1] Modify the current_running pointer.
+    if (ready_queue.prev==&ready_queue) return;     // If there is no task in the ready queue, return
 
+    pcb_t *prev_running=current_running;
+    list_node_t *prev_list=ready_queue.prev;        //ready_queue.prev is the first node of the queue
+    list_del(prev_list);
+    current_running=(pcb_t*)((int)prev_list-2*sizeof(reg_t));
+    if (prev_running->pid!=0)                       //make sure the kernel stays outside the ready_queue
+    {
+        prev_running->status=TASK_READY;
+        list_add(&ready_queue,&prev_running->list); //add the prev_running to the end of the queue
+    }
 
     // TODO: [p2-task1] switch_to current_running
+    switch_to(prev_running,current_running);
 
 }
 

@@ -50,8 +50,6 @@ extern void ret_from_exception();
 task_info_t tasks[TASK_MAXNUM];
 short task_num;
 
-void handle_app(void);
-
 static void init_jmptab(void)
 {
     volatile long (*(*jmptab))() = (volatile long (*(*))())KERNEL_JMPTAB_BASE;
@@ -82,11 +80,13 @@ static void init_task_info(void)
     int offset=info_address%512;
     int block_num=(info_address+sizeof(task_info_t)*task_num-1)/512+1-block_id;
     bios_sdread(TASK_ADDRESS, block_num, block_id);
-    for (int i=0;i<task_num;i++)
+    for (short i=0;i<task_num;i++)
     {
         tasks[i]=*((task_info_t*)(unsigned long)(TASK_ADDRESS+offset));
+        load_task_img(tasks[i].task_name,task_num);
         offset+=sizeof(task_info_t);
     }
+
 }
 
 static void init_pcb_stack(
@@ -108,16 +108,29 @@ static void init_pcb_stack(
      */
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
-
+    for (int i=2;i<14;i++)
+        pt_switchto->regs[i]=0;
+    pt_switchto->regs[0]=(reg_t)entry_point;  //ra
+    pt_switchto->regs[1]=(reg_t)user_stack;   //sp 
+    pcb->kernel_sp=(ptr_t)pt_switchto;
 }
 
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-
-
+    printl("task_num:%d\n",task_num);
+    for (short i=0;i<task_num;i++)
+    {
+        pcb[i].pid=i+1;
+        pcb[i].kernel_sp=allocKernelPage(1);
+        pcb[i].user_sp=allocUserPage(1);
+        pcb[i].status=TASK_READY;
+        pcb[i].cursor_x=pcb[i].cursor_y=0;
+        init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, tasks[i].entry_point, &pcb[i]);
+        list_add(&ready_queue,&(pcb[i].list));
+    }
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-
+    current_running=&pid0_pcb;
 }
 
 static void init_syscall(void)
@@ -159,8 +172,6 @@ int main(void)
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
 
-    handle_app();
-
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
@@ -173,53 +184,4 @@ int main(void)
     }
 
     return 0;
-}
-
-// copying from [p1-task4]
-void handle_app(void)
-{
-    char task_name[NAME_MAXNUM];
-    int input,len;
-    unsigned long current_address;
-    // init vars
-    len=0;
-    for (int i=0;i<NAME_MAXNUM;i++)
-        task_name[i]=0;
-    bios_putstr("Please input task name\n\r");
-    while(1)
-    {
-        input=bios_getchar();
-        if (input==-1) 
-            continue;
-        else if (input=='\r')
-        {
-            if (len==0)
-            {
-                bios_putstr("Please input task name\n\r");
-                continue;
-            }
-            bios_putstr("\n\r");
-            current_address=load_task_img(task_name,task_num);
-            if (current_address==-1)
-                bios_putstr("Invalid task name!\n\r");
-            else 
-                (*(void(*)())current_address)();
-            for (int i=0;i<=len;i++)
-                task_name[i]=0;
-            len=0;
-        }
-        else 
-        {
-            bios_putchar(input);
-            task_name[len]=input;
-            len++;
-            if (len>=NAME_MAXNUM)
-            {
-                bios_putstr("Task name too long!\n\r");
-                for (int i=0;i<=len;i++)
-                    task_name[i]=0;
-                len=0;
-            }
-        }
-    }
 }
