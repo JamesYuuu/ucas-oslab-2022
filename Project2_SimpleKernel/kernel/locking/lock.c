@@ -66,7 +66,7 @@ void do_mutex_lock_release(int mlock_idx)
 {
     /* TODO: [p2-task2] release mutex lock */
 
-    if (mlocks[mlock_idx].block_queue.prev==&mlocks[mlock_idx].block_queue) 
+    if (list_empty(&mlocks[mlock_idx].block_queue))
         mlocks[mlock_idx].lock.status=UNLOCKED;
     else 
         do_unblock(mlocks[mlock_idx].block_queue.prev);

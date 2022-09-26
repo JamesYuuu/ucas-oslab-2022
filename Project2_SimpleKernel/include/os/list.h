@@ -68,4 +68,8 @@ static inline void list_del(list_node_t *node)
     node->prev->next = node->next;
     node->next->prev = node->prev;
 }
+static inline int list_empty(list_head *head)
+{
+    return (head->prev==head);
+}
 #endif
