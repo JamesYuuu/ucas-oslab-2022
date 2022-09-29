@@ -32,8 +32,7 @@ pcb_t* list_to_pcb(list_node_t *list)
 void do_scheduler(void)
 {
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
-
-
+    check_sleeping();
     // TODO: [p2-task1] Modify the current_running pointer.
     if (list_empty(&ready_queue)) return;     // If there is no task in the ready queue, return
 
@@ -59,6 +58,10 @@ void do_sleep(uint32_t sleep_time)
     // 1. block the current_running
     // 2. set the wake up time for the blocked task
     // 3. reschedule because the current_running is blocked.
+    current_running->status=TASK_BLOCKED;
+    current_running->wakeup_time=get_ticks()+sleep_time*time_base;
+    list_add(&sleep_queue,&current_running->list);
+    do_scheduler();
 }
 
 void do_block(list_node_t *pcb_node, list_head *queue)

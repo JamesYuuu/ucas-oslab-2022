@@ -99,7 +99,16 @@ static void init_pcb_stack(
       */
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-
+    for (int i=0;i<32;i++)
+        pt_regs->regs[i]=0;
+    pt_regs->regs[1]=(reg_t)entry_point; //ra
+    pt_regs->regs[2]=(reg_t)user_stack;  //sp
+    pt_regs->regs[3]=(reg_t)pcb;         //tp
+    // special registers
+    pt_regs->sstatus=SR_SPIE & ~SR_SPP;  // make spie(1) and spp(0)
+    pt_regs->sepc=(reg_t)entry_point;
+    pt_regs->sbadaddr=0;
+    pt_regs->scause=0;
 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
      * NOTE: you should prepare a stack, and push some values to
@@ -134,6 +143,16 @@ static void init_pcb(void)
 static void init_syscall(void)
 {
     // TODO: [p2-task3] initialize system call table.
+    syscall[SYSCALL_SLEEP]=(long (*)())do_sleep;
+    syscall[SYSCALL_YIELD]=(long (*)())do_scheduler;
+    syscall[SYSCALL_WRITE]=(long (*)())screen_write;
+    syscall[SYSCALL_CURSOR]=(long (*)())screen_move_cursor;
+    syscall[SYSCALL_REFLUSH]=(long (*)())screen_reflush;
+    syscall[SYSCALL_GET_TIMEBASE]=(long (*)())get_time_base;
+    syscall[SYSCALL_GET_TICK]=(long (*)())get_ticks;
+    syscall[SYSCALL_LOCK_INIT]=(long (*)())do_mutex_lock_init;
+    syscall[SYSCALL_LOCK_ACQ]=(long (*)())do_mutex_lock_acquire;
+    syscall[SYSCALL_LOCK_RELEASE]=(long (*)())do_mutex_lock_release;
 }
 
 int main(void)

@@ -108,4 +108,6 @@ void do_sleep(uint32_t);
 void do_block(list_node_t *, list_head *queue);
 void do_unblock(list_node_t *);
 
+pcb_t* list_to_pcb(list_node_t *list);
+
 #endif
