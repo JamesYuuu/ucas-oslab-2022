@@ -175,7 +175,14 @@ ENTRY(switch_to)
   ld s11,SWITCH_TO_S11(t0)
   mv tp, a1
   addi sp, sp, SWITCH_TO_SIZE
-  jr ra
+  
+  ld t0,PCB_KERNEL_SP(tp)
+  addi t0,t0,SWITCH_TO_SIZE // make sp point to regs_context_t
+  ld t1,OFFSET_REG_SSTATUS(t0)
+  csrw CSR_SSTATUS,t1
+  ld t1,OFFSET_REG_SEPC(t0)
+  csrw CSR_SEPC,t1
+  sret
 ENDPROC(switch_to)
 
 ENTRY(ret_from_exception)
@@ -192,8 +199,7 @@ ENTRY(exception_handler_entry)
   /* TODO: [p2-task3] load ret_from_exception into $ra so that we can return to
    * ret_from_exception when interrupt_help complete.
    */
-  ld ra,ret_from_exception
-
+  
   /* TODO: [p2-task3] call interrupt_helper
    * NOTE: don't forget to pass parameters for it.
    */
@@ -202,5 +208,6 @@ ENTRY(exception_handler_entry)
   csrr a1,CSR_STVAL
   csrr a2,CSR_SCAUSE
   call interrupt_helper
+  j ret_from_exception
 
 ENDPROC(exception_handler_entry)
