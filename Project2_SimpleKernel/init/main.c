@@ -137,6 +137,7 @@ static void init_pcb(void)
         list_add(&ready_queue,&(pcb[i].list));
     }
     /* TODO: [p2-task1] remember to initialize 'current_running' */
+    // init_pcb_stack(pid0_pcb.kernel_sp,pid0_pcb.user_sp,(uint64_t)0x50201000,&pid0_pcb);
     current_running=&pid0_pcb;
 }
 
@@ -188,16 +189,19 @@ int main(void)
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
+    set_timer(get_ticks()+TIMER_INTERVAL);
+
+    // asm volatile("mv tp, %0"::"r"(&pid0_pcb));
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
         // If you do non-preemptive scheduling, it's used to surrender control
-        do_scheduler();
+        // do_scheduler();
 
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
-        // enable_preempt();
-        // asm volatile("wfi");
+        enable_preempt();
+        asm volatile("wfi");
     }
 
     return 0;

@@ -186,6 +186,7 @@ ENDPROC(ret_from_exception)
 ENTRY(exception_handler_entry)
 
   /* TODO: [p2-task3] save context via the provided macro */
+  beqz tp,end
   SAVE_CONTEXT
   /* TODO: [p2-task3] load ret_from_exception into $ra so that we can return to
    * ret_from_exception when interrupt_help complete.
@@ -194,6 +195,7 @@ ENTRY(exception_handler_entry)
   /* TODO: [p2-task3] call interrupt_helper
    * NOTE: don't forget to pass parameters for it.
    */
+end:
   ld a0,PCB_KERNEL_SP(tp)
   addi a0,a0,SWITCH_TO_SIZE
   csrr a1,CSR_STVAL
