@@ -103,7 +103,7 @@ static void init_pcb_stack(
         pt_regs->regs[i]=0;
     pt_regs->regs[1]=(reg_t)entry_point; //ra
     pt_regs->regs[2]=(reg_t)user_stack;  //sp
-    pt_regs->regs[3]=(reg_t)pcb;         //tp
+    pt_regs->regs[4]=(reg_t)pcb;         //tp
     // special registers
     pt_regs->sstatus=SR_SPIE & ~SR_SPP;  // make spie(1) and spp(0)
     pt_regs->sepc=(reg_t)entry_point;

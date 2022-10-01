@@ -9,7 +9,7 @@
   ld sp,PCB_KERNEL_SP(tp)
   addi sp,sp,SWITCH_TO_SIZE // make sp point to regs_context_t
 
-  // save all regs except sp and tp
+  // save all regs except sp
   sd zero,OFFSET_REG_ZERO(sp)
   sd ra,OFFSET_REG_RA(sp)
   sd gp,OFFSET_REG_GP(sp)
@@ -109,7 +109,6 @@
   ld t5,OFFSET_REG_T5(sp)
   ld t6,OFFSET_REG_T6(sp)
   ld sp,OFFSET_REG_SP(sp)
-
 .endm
 
 ENTRY(enable_preempt)
@@ -138,7 +137,6 @@ ENDPROC(disable_interrupt)
 // NOTE: the address of previous pcb in a0
 // NOTE: the address of next pcb in a1
 ENTRY(switch_to)
-  addi sp, sp, -(SWITCH_TO_SIZE)
   /* TODO: [p2-task1] save all callee save registers on kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/
   ld t0,PCB_KERNEL_SP(a0)
@@ -174,15 +172,8 @@ ENTRY(switch_to)
   ld s10,SWITCH_TO_S10(t0)
   ld s11,SWITCH_TO_S11(t0)
   mv tp, a1
-  addi sp, sp, SWITCH_TO_SIZE
   
-  ld t0,PCB_KERNEL_SP(tp)
-  addi t0,t0,SWITCH_TO_SIZE // make sp point to regs_context_t
-  ld t1,OFFSET_REG_SSTATUS(t0)
-  csrw CSR_SSTATUS,t1
-  ld t1,OFFSET_REG_SEPC(t0)
-  csrw CSR_SEPC,t1
-  sret
+  j ret_from_exception
 ENDPROC(switch_to)
 
 ENTRY(ret_from_exception)
