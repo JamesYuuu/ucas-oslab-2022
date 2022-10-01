@@ -6,16 +6,22 @@ static const long IGNORE = 0L;
 static long invoke_syscall(long sysno, long arg0, long arg1, long arg2,
                            long arg3, long arg4)
 {
+    long result;
     /* TODO: [p2-task3] implement invoke_syscall via inline assembly */
     asm volatile(
-        "mv a7,a0;\
-        mv a0,a1;\
-        mv a1,a2;\
-        mv a2,a3;\
-        mv a3,a4;\
-        mv a4,a5;\
-        ecall;"
+        "mv a7,%1;\
+        mv a0,%2;\
+        mv a1,%3;\
+        mv a2,%4;\
+        mv a3,%5;\
+        mv a4,%6;\
+        ecall;\
+        mv %0,a0"
+        :"=r"(result)
+        :"r"(sysno),"r"(arg0),"r"(arg1),"r"(arg2),"r"(arg3),"r"(arg4)
+        :"a0","a1","a2","a3","a4","a7"
     );
+    return result;
 }
 
 void sys_yield(void)

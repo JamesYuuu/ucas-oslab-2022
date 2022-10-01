@@ -38,10 +38,11 @@ void check_sleeping(void)
     while (temp_queue->prev!=&sleep_queue)
     {
         pcb_t *pcb=list_to_pcb(temp_queue->prev);
-        if (pcb->wakeup_time<=get_ticks())
+        if (pcb->wakeup_time<=get_timer())
         {
+            list_node_t *temp_node=temp_queue->prev;
             list_del(temp_queue->prev);
-            list_add(&ready_queue,temp_queue->prev);
+            list_add(&ready_queue,temp_node);
             pcb->status=TASK_READY;
         }
         temp_queue=temp_queue->prev;

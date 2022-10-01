@@ -140,17 +140,9 @@ static void init_pcb(void)
     current_running=&pid0_pcb;
 }
 
-static void err_syscall(reg_t sysno)
-{
-    printk("> [Error] No such syscall number: %d.\n\r",sysno);
-	while(1);
-}
-
 static void init_syscall(void)
 {
     // TODO: [p2-task3] initialize system call table.
-    for (int i=0;i<NUM_SYSCALLS;i++)
-        syscall[i]=(long (*)())err_syscall;
     syscall[SYSCALL_SLEEP]=(long (*)())do_sleep;
     syscall[SYSCALL_YIELD]=(long (*)())do_scheduler;
     syscall[SYSCALL_WRITE]=(long (*)())screen_write;

@@ -49,7 +49,7 @@ int do_mutex_lock_init(int key)
            mlocks[i].key=key;
            return i;
        }
-    return 0;
+    return -1;
 }
 
 void do_mutex_lock_acquire(int mlock_idx)
