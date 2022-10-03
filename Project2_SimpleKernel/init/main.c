@@ -129,10 +129,11 @@ static void init_pcb(void)
     for (short i=0;i<task_num;i++)
     {
         pcb[i].pid=i+1;
-        pcb[i].kernel_sp=allocKernelPage(1);
-        pcb[i].user_sp=allocUserPage(1);
+        pcb[i].kernel_sp=allocKernelPage(4);
+        pcb[i].user_sp=allocUserPage(4);
         pcb[i].status=TASK_READY;
         pcb[i].cursor_x=pcb[i].cursor_y=0;
+        pcb[i].thread_num=-1;
         init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, tasks[i].entry_point, &pcb[i]);
         list_add(&ready_queue,&(pcb[i].list));
     }
@@ -153,6 +154,7 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_INIT]=(long (*)())do_mutex_lock_init;
     syscall[SYSCALL_LOCK_ACQ]=(long (*)())do_mutex_lock_acquire;
     syscall[SYSCALL_LOCK_RELEASE]=(long (*)())do_mutex_lock_release;
+    syscall[SYSCALL_CREATE_THREAD]=(long(*)())create_thread;
 }
 
 int main(void)

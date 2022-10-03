@@ -173,7 +173,7 @@ ENTRY(switch_to)
   ld s11,SWITCH_TO_S11(t0)
   mv tp, a1
   
-  j ret_from_exception
+  # j ret_from_exception
 ENDPROC(switch_to)
 
 ENTRY(ret_from_exception)

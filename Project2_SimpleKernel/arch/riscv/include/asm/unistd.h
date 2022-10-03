@@ -11,5 +11,7 @@
 #define SYSCALL_LOCK_INIT 40
 #define SYSCALL_LOCK_ACQ 41
 #define SYSCALL_LOCK_RELEASE 42
+// add create_thread
+#define SYSCALL_CREATE_THREAD 50
 
 #endif

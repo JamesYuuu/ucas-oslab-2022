@@ -26,7 +26,7 @@ static long invoke_syscall(long sysno, long arg0, long arg1, long arg2,
 
 void sys_yield(void)
 {
-    /* TODO: [p2-task3] call invoke_syscall to implement sys_yield */
+    /* TODO: [p2-task3] call invoke_syscall to implement // sys_yield */
     invoke_syscall(SYSCALL_YIELD,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
@@ -82,4 +82,10 @@ void sys_sleep(uint32_t time)
 {
     /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
     invoke_syscall(SYSCALL_SLEEP,time,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+// add create_thread
+void sys_create_thread(void *entry, void *arg)
+{
+    invoke_syscall(SYSCALL_CREATE_THREAD,(long)entry,(long)arg,IGNORE,IGNORE,IGNORE);
 }

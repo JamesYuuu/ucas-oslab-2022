@@ -33,6 +33,7 @@
 #include <os/list.h>
 
 #define NUM_MAX_TASK 16
+#define NUM_MAX_THREAD 4
 
 /* used to save register infomation */
 typedef struct regs_context
@@ -85,6 +86,11 @@ typedef struct pcb
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
 
+    // [p2-task5] add thread list
+    struct pcb *son[NUM_MAX_THREAD];
+    int thread_num;
+    struct pcb *father;
+
 } pcb_t;
 
 /* ready queue to run */
@@ -109,5 +115,6 @@ void do_block(list_node_t *, list_head *queue);
 void do_unblock(list_node_t *);
 
 pcb_t* list_to_pcb(list_node_t *list);
+void create_thread(long entry,long arg);
 
 #endif
