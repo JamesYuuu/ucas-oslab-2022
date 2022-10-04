@@ -87,10 +87,13 @@ typedef struct pcb
     uint64_t wakeup_time;
 
     // [p2-task5] add thread list
-    struct pcb *son[NUM_MAX_THREAD];
-    int thread_num;
-    struct pcb *father;
 
+    int thread_num;
+    union{
+        struct pcb *father;
+        struct pcb *son[NUM_MAX_THREAD];
+    };
+    
 } pcb_t;
 
 /* ready queue to run */

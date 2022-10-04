@@ -7,7 +7,5 @@ ENTRY(setup_exception)
   la s0, exception_handler_entry
   csrw CSR_STVEC, s0
   /* TODO: [p2-task4] enable interrupts globally */
-  li s0, SR_SIE
-  csrw CSR_SSTATUS,s0
-  jr ra
+  j enable_interrupt
 ENDPROC(setup_exception)
