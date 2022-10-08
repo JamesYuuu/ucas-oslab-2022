@@ -26,6 +26,7 @@ void* add(void *arg)
 int main(void)
 {
     int total_sum,finish;
+    total_sum=0;
     for (int i=0;i<THREAD_NUM;i++)
         thread_finish[i]=sum[i]=0;
     for (int i=0;i<1000;i++)
