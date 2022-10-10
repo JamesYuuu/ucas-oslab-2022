@@ -129,8 +129,8 @@ static void init_pcb(void)
     for (short i=0;i<task_num;i++)
     {
         pcb[i].pid=i+1;
-        pcb[i].kernel_sp=allocKernelPage(4);
-        pcb[i].user_sp=allocUserPage(4);
+        pcb[i].kernel_sp=allocKernelPage(1);
+        pcb[i].user_sp=allocUserPage(1);
         pcb[i].status=TASK_READY;
         pcb[i].cursor_x=pcb[i].cursor_y=0;
         pcb[i].thread_num=-1;

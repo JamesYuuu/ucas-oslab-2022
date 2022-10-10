@@ -15,16 +15,8 @@ void create_thread(long entry, long arg)
 {
     ptr_t kernel_stack,user_stack;
 
-    if (current_running->thread_num==-1) 
-    {
-        kernel_stack=current_running->kernel_sp-THREAD_STACK_SIZE;
-        user_stack=current_running->user_sp-THREAD_STACK_SIZE;
-    }
-    else 
-    {
-        kernel_stack=current_running->son[current_running->thread_num]->kernel_sp-THREAD_STACK_SIZE;
-        user_stack=current_running->son[current_running->thread_num]->user_sp-THREAD_STACK_SIZE;
-    }
+    kernel_stack = allocKernelPage(1);
+    user_stack = allocUserPage(1);
 
     // init regs_context_t by copying from father pcb;
     regs_context_t *pcb_regs =
