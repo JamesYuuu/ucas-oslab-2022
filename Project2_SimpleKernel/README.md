@@ -203,16 +203,15 @@ int do_mutex_lock_init(int key)
 }
 ```
 
-当用户程序申请锁的时候，我们首先判断锁的状态，如果锁的状态为`UNLOCKED`，那么我们将锁的状态设置为`LOCKED`。如果此时锁的状态已经为`LOCKED`，则代表锁已经被其他进程占用，我们将当前进程加入到锁的阻塞队列中，并将当前进程的状态设置为`TASK_BLOCKED`，然后调用`do_scheduler`函数进行进程切换。
+当用户程序申请锁的时候，我们首先判断锁的状态，如果锁的状态为`UNLOCKED`，那么我们将锁的状态设置为`LOCKED`。如果此时锁的状态已经为`LOCKED`，则代表锁已经被其他进程占用，我们将当前进程加入到锁的阻塞队列中，并将当前进程的状态设置为`TASK_BLOCKED`，然后调用`do_scheduler`函数进行进程切换，等到锁被释放后，再次尝试申请锁，直到成功申请为止。
 
 ```c
 void do_mutex_lock_acquire(int mlock_idx)
 {
     /* TODO: [p2-task2] acquire mutex lock */
-    if (mlocks[mlock_idx].lock.status==LOCKED) 
+    while (mlocks[mlock_idx].lock.status==LOCKED) 
         do_block(&current_running->list,&mlocks[mlock_idx].block_queue);
-    else 
-        mlocks[mlock_idx].lock.status=LOCKED;
+    mlocks[mlock_idx].lock.status=LOCKED;
 }
 void do_block(list_node_t *pcb_node, list_head *queue)
 {
@@ -224,18 +223,17 @@ void do_block(list_node_t *pcb_node, list_head *queue)
 }
 ```
 
-当用户程序释放锁的时候，如果锁的阻塞队列为空，那么我们将锁的状态设置为`UNLOCKED`，否则我们将该锁所有阻塞队列中的第一个进程唤醒，并加入到`ready_queue`中，然后调用`do_scheduler`函数进行进程切换。
+当用户程序释放锁的时候，如果锁的阻塞队列为空，那么我们将锁的状态设置为`UNLOCKED`，否则我们将该锁阻塞队列中所有的进程唤醒，并加入到`ready_queue`中，然后调用`do_scheduler`函数进行进程切换。
 
 ```c
 void do_mutex_lock_release(int mlock_idx)
 {
     /* TODO: [p2-task2] release mutex lock */
-    // release all locked tasks
-    if (list_empty(&mlocks[mlock_idx].block_queue))
-        mlocks[mlock_idx].lock.status=UNLOCKED;
-    else 
+    while (!list_empty(&mlocks[mlock_idx].block_queue))
         do_unblock(mlocks[mlock_idx].block_queue.prev);
+    mlocks[mlock_idx].lock.status=UNLOCKED;
 }
+
 void do_unblock(list_node_t *pcb_node)
 {
     // TODO: [p2-task2] unblock the `pcb` from the block queue
@@ -244,7 +242,6 @@ void do_unblock(list_node_t *pcb_node)
     pcb_t *pcb=list_to_pcb(pcb_node);
     pcb->status=TASK_READY;
 }
-
 ```
 
 这样我们就实现了互斥锁的相关操作。
@@ -496,7 +493,7 @@ static void init_syscall(void)
 }
 ```
 
-到这里，我们的系统调用函数就已经全部实现完毕了，此外，我们需要为第一次上下文切换做好准备，因此我们需要在`init_pcb_stack`中增加对于`regs_context_t`的初始化。我们需要初始化将`ra`和`sepc`寄存器的值保存为用户程序的入口地址，确保第一次切换到用户程序时，能够正确执行。此外我们需要保证`sp`寄存器指向用户栈，`tp`寄存器指向`pcb`的地址，`ssatus`中的`spie`设置为1,`spp`设置为0，以确保能正常响应中断。
+到这里，我们的系统调用函数就已经全部实现完毕了，此外，我们需要为第一次上下文切换做好准备，因此我们需要在`init_pcb_stack`中增加对于`regs_context_t`的初始化。我们需要初始化将`sepc`寄存器的值保存为用户程序的入口地址，确保第一次切换到用户程序时，能够正确执行。此外我们需要保证`sp`寄存器指向用户栈，`tp`寄存器指向`pcb`的地址，`ssatus`中的`spie`设置为1,`spp`设置为0，以确保能正常响应中断。
 
 ```c
 static void init_pcb_stack(
@@ -512,7 +509,6 @@ static void init_pcb_stack(
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
     for (int i=0;i<32;i++)
         pt_regs->regs[i]=0;
-    pt_regs->regs[1]=(reg_t)entry_point; //ra
     pt_regs->regs[2]=(reg_t)user_stack;  //sp
     pt_regs->regs[4]=(reg_t)pcb;         //tp
     // special registers
@@ -616,17 +612,8 @@ int thread_id = 0;
 void create_thread(long entry, long arg) 
 {
     ptr_t kernel_stack,user_stack;
-
-    if (current_running->thread_num==-1) 
-    {
-        kernel_stack=current_running->kernel_sp-THREAD_STACK_SIZE;
-        user_stack=current_running->user_sp-THREAD_STACK_SIZE;
-    }
-    else 
-    {
-        kernel_stack=current_running->son[current_running->thread_num]->kernel_sp-THREAD_STACK_SIZE;
-        user_stack=current_running->son[current_running->thread_num]->user_sp-THREAD_STACK_SIZE;
-    }
+    kernel_stack = allocKernelPage(1);
+    user_stack = allocUserPage(1);
 
     // init regs_context_t by copying from father pcb;
     regs_context_t *pcb_regs =

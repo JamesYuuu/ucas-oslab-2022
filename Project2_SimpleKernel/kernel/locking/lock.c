@@ -63,9 +63,7 @@ void do_mutex_lock_acquire(int mlock_idx)
 void do_mutex_lock_release(int mlock_idx)
 {
     /* TODO: [p2-task2] release mutex lock */
-
     while (!list_empty(&mlocks[mlock_idx].block_queue))
         do_unblock(mlocks[mlock_idx].block_queue.prev);
     mlocks[mlock_idx].lock.status=UNLOCKED;
-    do_scheduler();
 }
