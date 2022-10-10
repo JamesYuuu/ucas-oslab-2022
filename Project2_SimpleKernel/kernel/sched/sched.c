@@ -80,5 +80,4 @@ void do_unblock(list_node_t *pcb_node)
     list_add(&ready_queue,pcb_node);
     pcb_t *pcb=list_to_pcb(pcb_node);
     pcb->status=TASK_READY;
-    do_scheduler();
 }

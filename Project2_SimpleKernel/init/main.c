@@ -101,7 +101,6 @@ static void init_pcb_stack(
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
     for (int i=0;i<32;i++)
         pt_regs->regs[i]=0;
-    pt_regs->regs[1]=(reg_t)entry_point; //ra
     pt_regs->regs[2]=(reg_t)user_stack;  //sp
     pt_regs->regs[4]=(reg_t)pcb;         //tp
     // special registers
@@ -118,7 +117,7 @@ static void init_pcb_stack(
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
     for (int i=2;i<14;i++)
         pt_switchto->regs[i]=0;
-    pt_switchto->regs[0]=(reg_t)entry_point;  //ra
+    pt_switchto->regs[0]=(reg_t)ret_from_exception;  //ra
     pt_switchto->regs[1]=(reg_t)user_stack;   //sp 
     pcb->kernel_sp=(ptr_t)pt_switchto;
 }

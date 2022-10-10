@@ -4,12 +4,14 @@
 #include <os/list.h>
 #include <csr.h>
 #include <os/mm.h>
+#include <asm.h>
 
 #define THREAD_STACK_SIZE 1024
 #define MAX_THREAD_NUM 16
 
 pcb_t tcb[MAX_THREAD_NUM];
 int thread_id = 0;
+extern void ret_from_exception();
 
 void create_thread(long entry, long arg) 
 {
@@ -28,7 +30,6 @@ void create_thread(long entry, long arg)
         pt_regs->regs[i] = pcb_regs->regs[i];
 
     // init some special regs
-    pt_regs->regs[1]=(reg_t)entry;       //ra
     pt_regs->regs[2]=(reg_t)user_stack;  //sp
     pt_regs->regs[4]=(reg_t)&tcb[thread_id]; //tp
     pt_regs->regs[10]=(reg_t)arg;        //a0
@@ -47,7 +48,7 @@ void create_thread(long entry, long arg)
         pt_switchto->regs[i]=pcb_switchto->regs[i];
 
     // init some special regs
-    pt_switchto->regs[0]=(reg_t)entry;        //ra
+    pt_switchto->regs[0]=(reg_t)ret_from_exception;        //ra
     pt_switchto->regs[1]=(reg_t)user_stack;   //sp 
 
     // set new thread

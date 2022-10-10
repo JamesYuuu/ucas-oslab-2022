@@ -55,19 +55,17 @@ int do_mutex_lock_init(int key)
 void do_mutex_lock_acquire(int mlock_idx)
 {
     /* TODO: [p2-task2] acquire mutex lock */
-
-    if (mlocks[mlock_idx].lock.status==LOCKED) 
+    while (mlocks[mlock_idx].lock.status==LOCKED) 
         do_block(&current_running->list,&mlocks[mlock_idx].block_queue);
-    else 
-        mlocks[mlock_idx].lock.status=LOCKED;
+    mlocks[mlock_idx].lock.status=LOCKED;
 }
 
 void do_mutex_lock_release(int mlock_idx)
 {
     /* TODO: [p2-task2] release mutex lock */
 
-    if (list_empty(&mlocks[mlock_idx].block_queue))
-        mlocks[mlock_idx].lock.status=UNLOCKED;
-    else 
+    while (!list_empty(&mlocks[mlock_idx].block_queue))
         do_unblock(mlocks[mlock_idx].block_queue.prev);
+    mlocks[mlock_idx].lock.status=UNLOCKED;
+    do_scheduler();
 }
