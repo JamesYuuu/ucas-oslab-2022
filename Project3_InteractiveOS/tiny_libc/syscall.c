@@ -49,6 +49,11 @@ void sys_reflush(void)
     invoke_syscall(SYSCALL_REFLUSH,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
+void sys_clear(void)
+{
+    invoke_syscall(SYSCALL_CLEAR,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
 int sys_mutex_init(int key)
 {
     /* TODO: [p2-task3] call invoke_syscall to implement sys_mutex_init */
