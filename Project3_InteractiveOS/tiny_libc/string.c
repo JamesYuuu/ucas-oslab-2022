@@ -24,8 +24,8 @@ void bzero(void *dest, uint32_t len)
 int strlen(const char *src)
 {
     int i = 0;
-    while (src[i++] != '\0') {
-        ;
+    while (src[i] != '\0') {
+        i++;
     }
     return i;
 }
@@ -44,14 +44,15 @@ int strcmp(const char *str1, const char *str2)
 
 int strncmp(const char *str1, const char *str2, int n)
 {
-    while (*str1 && *str2 && n-- > 0) {
-        if (*str1 != *str2) {
-            return (*str1) - (*str2);
+    for (int i = 0; i < n; ++i)
+    {
+        if (str1[i] != str2[i])
+        {
+            return str1[i] - str2[i];
         }
-        ++str1;
-        ++str2;
     }
-    return (*str1) - (*str2);
+
+    return 0;
 }
 
 char *strcpy(char *dest, const char *src)
@@ -97,7 +98,6 @@ char *strcat(char *dest, const char *src)
 
     return tmp;
 }
-
 
 void strrev(char *str)
 {
