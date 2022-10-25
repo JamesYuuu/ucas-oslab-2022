@@ -32,22 +32,63 @@
 #include <ctype.h>
 
 #define SHELL_BEGIN 20
+#define BUFFER_MAX 100
+
+char command_buffer[100];
+int len;
+
+void execute_command();
+void init_buffer();
 
 int main(void)
 {
+    int input;
     sys_move_cursor(0, SHELL_BEGIN);
     printf("------------------- COMMAND -------------------\n");
-    printf("> root@UCAS_OS: ");
-
+    init_buffer();
     while (1)
     {
         // TODO [P3-task1]: call syscall to read UART port
-        
+        input = sys_getchar();
+        // if there is no input, continue
+        if (input == -1) continue;
         // TODO [P3-task1]: parse input
         // note: backspace maybe 8('\b') or 127(delete)
+        // if their is a backspace, delete the last character
+        if ((input == 8 || input == 127) && (len>0))
+        {
+            command_buffer[--len]=0;
+            printf("\b");
+            continue;
+        }
+        // if the input is enter, execute the command
+        if (input == 13)
+        {
+            printf("\n");
+            execute_command();
+            init_buffer();
+            continue;
+        }
+
+        command_buffer[len++] = input;
+        printf("%c",input);
 
         // TODO [P3-task1]: ps, exec, kill, clear        
     }
 
     return 0;
+}
+
+void init_buffer()
+{
+    len = 0;
+    memset(command_buffer, 0, BUFFER_MAX);
+    printf("> root@UCAS_OS: ");
+    return;
+}
+
+void execute_command()
+{
+    printf(command_buffer);
+    printf("\n");
 }

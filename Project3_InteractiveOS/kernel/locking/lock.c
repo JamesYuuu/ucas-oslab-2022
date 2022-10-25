@@ -67,3 +67,71 @@ void do_mutex_lock_release(int mlock_idx)
         do_unblock(mlocks[mlock_idx].block_queue.prev);
     mlocks[mlock_idx].lock.status=UNLOCKED;
 }
+
+// syscalls for barrier
+void init_barriers(void)
+{
+
+}
+
+int do_barrier_init(int key, int goal)
+{
+
+}
+void do_barrier_wait(int bar_idx)
+{
+
+}
+void do_barrier_destroy(int bar_idx)
+{
+
+}
+
+// syscalls for condition
+void init_conditions(void)
+{
+
+}
+
+int do_condition_init(int key)
+{
+
+}
+void do_condition_wait(int cond_idx, int mutex_idx)
+{
+
+}
+void do_condition_signal(int cond_idx)
+{
+
+}
+void do_condition_broadcast(int cond_idx)
+{
+
+}
+void do_condition_destroy(int cond_idx)
+{
+
+}
+
+// syscalls for mailbox
+void init_mbox()
+{
+
+}
+int do_mbox_open(char *name)
+{
+
+}
+void do_mbox_close(int mbox_idx)
+{
+
+}
+int do_mbox_send(int mbox_idx, void * msg, int msg_length)
+{
+
+}
+int do_mbox_recv(int mbox_idx, void * msg, int msg_length)
+{
+    
+}

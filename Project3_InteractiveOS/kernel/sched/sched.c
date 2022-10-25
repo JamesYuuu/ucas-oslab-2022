@@ -26,7 +26,7 @@ pid_t process_id = 1;
 
 pcb_t* list_to_pcb(list_node_t *list)
 {
-    return (pcb_t*)((int)list-2*sizeof(reg_t));
+    return (pcb_t*)((int)list-2*sizeof(reg_t)-2*sizeof(ptr_t));
 }
 
 void do_scheduler(void)
@@ -80,4 +80,35 @@ void do_unblock(list_node_t *pcb_node)
     list_add(&ready_queue,pcb_node);
     pcb_t *pcb=list_to_pcb(pcb_node);
     pcb->status=TASK_READY;
+}
+
+// syscalls for processes
+pid_t do_exec(char *name, int argc, char *argv[])
+{
+
+}
+
+int do_kill(pid_t pid)
+{
+   
+}
+
+void do_exit(void)
+{
+
+}
+
+int do_waitpid(pid_t pid)
+{
+
+}
+
+void do_process_show()
+{
+
+}
+
+pid_t do_getpid()
+{
+
 }
