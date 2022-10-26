@@ -65,13 +65,13 @@ void init_screen(void)
 {
     vt100_hidden_cursor();
     vt100_clear();
-    screen_clear();
+    screen_clear(0);
 }
 
-void screen_clear(void)
+void screen_clear(int height)
 {
     int i, j;
-    for (i = 0; i < SCREEN_HEIGHT; i++)
+    for (i = height; i < SCREEN_HEIGHT; i++)
     {
         for (j = 0; j < SCREEN_WIDTH; j++)
         {

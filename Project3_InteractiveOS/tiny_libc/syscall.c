@@ -49,9 +49,9 @@ void sys_reflush(void)
     invoke_syscall(SYSCALL_REFLUSH,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
-void sys_clear(void)
+void sys_clear(int height)
 {
-    invoke_syscall(SYSCALL_CLEAR,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
+    invoke_syscall(SYSCALL_CLEAR,(long)height,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_mutex_init(int key)

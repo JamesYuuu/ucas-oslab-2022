@@ -118,7 +118,7 @@ void execute_command()
     // command clear
     if (strcmp(argv[0],"clear")==0)
     {
-        sys_clear();
+        sys_clear(SHELL_BEGIN);
         sys_move_cursor(0, SHELL_BEGIN);
         printf("------------------- COMMAND -------------------\n");
         return;
