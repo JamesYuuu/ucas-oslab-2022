@@ -31,5 +31,5 @@ uint64_t load_task_img(char *taskname, short task_num)
             return tasks[i].entry_point;     
         }
     }
-    return -1;
+    return 0;
 }

@@ -135,5 +135,8 @@ extern int do_waitpid(pid_t pid);
 extern void do_process_show();
 extern pid_t do_getpid();
 
+extern short task_num;
+extern void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,pcb_t *pcb);
+
 
 #endif

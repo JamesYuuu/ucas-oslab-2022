@@ -87,7 +87,7 @@ static void init_task_info(void)
     }
 }
 
-static void init_pcb_stack(
+void init_pcb_stack(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
     pcb_t *pcb)
 {

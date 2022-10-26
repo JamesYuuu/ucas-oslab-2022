@@ -129,6 +129,12 @@ void execute_command()
         sys_ps();
         return;
     }
+    // command exec
+    if (strcmp(argv[0],"exec")==0)
+    {
+        sys_exec(argv[1],argc-2,argv+2);
+        return;
+    }
 
     // unknown command
     printf("Error: Unknown command: %s\n",argv[0]);

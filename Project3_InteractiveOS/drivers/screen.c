@@ -13,13 +13,6 @@
 char new_screen[SCREEN_HEIGHT * SCREEN_WIDTH] = {0};
 char old_screen[SCREEN_HEIGHT * SCREEN_WIDTH] = {0};
 
-// add to implement backspace for p3
-/* clear line from the position of cursor*/
-static void vt100_clear_line()
-{
-    // \033[K
-    printv("%c[K",27);
-}
 /* cursor position */
 static void vt100_move_cursor(int x, int y)
 {
