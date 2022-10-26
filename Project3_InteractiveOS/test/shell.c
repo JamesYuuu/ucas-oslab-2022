@@ -123,6 +123,12 @@ void execute_command()
         printf("------------------- COMMAND -------------------\n");
         return;
     }
+    // command ps
+    if (strcmp(argv[0],"ps")==0)
+    {
+        sys_ps();
+        return;
+    }
 
     // unknown command
     printf("Error: Unknown command: %s\n",argv[0]);

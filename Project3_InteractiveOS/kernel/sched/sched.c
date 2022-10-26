@@ -105,10 +105,29 @@ int do_waitpid(pid_t pid)
 
 void do_process_show()
 {
-
+    printk("[Process Table]:\n");
+    for (int i=0;i<process_id;i++)
+    {
+        printk("[%d] PID : %d , STATUS : ",i,pcb[i].pid);
+        switch (pcb[i].status)
+        {
+            case TASK_RUNNING:
+                printk("RUNNING\n");
+                break;
+            case TASK_READY:
+                printk("READY\n");
+                break;
+            case TASK_BLOCKED:
+                printk("BLOCKED\n");
+                break;
+            case TASK_EXITED:
+                printk("EXITED\n");
+                break;
+        }
+    }
 }
 
 pid_t do_getpid()
 {
-
+    return current_running->pid;
 }
