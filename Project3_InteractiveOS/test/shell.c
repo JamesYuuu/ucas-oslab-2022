@@ -132,7 +132,13 @@ void execute_command()
     // command exec
     if (strcmp(argv[0],"exec")==0)
     {
-        sys_exec(argv[1],argc-2,argv+2);
+        // remove 'exec' from argv
+        char *p[argc-1];
+        for (int i=1;i<argc;i++)
+            p[i-1]=argv[i];
+        int pid=sys_exec(argv[1],argc-1,p);
+        if (pid!=0) printf("Info: Execute %s successfully, pid=%d\n",argv[1],pid);
+            else printf("Error: Execute %s failed\n",argv[1]);
         return;
     }
 

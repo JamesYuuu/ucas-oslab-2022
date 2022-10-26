@@ -7,6 +7,8 @@
 #include <printk.h>
 #include <assert.h>
 #include <os/loader.h>
+#include <csr.h>
+#include <os/string.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
@@ -18,6 +20,8 @@ pcb_t pid0_pcb = {
 
 LIST_HEAD(ready_queue);
 LIST_HEAD(sleep_queue);
+
+extern void ret_from_exception();
 
 /* current running task PCB */
 pcb_t * volatile current_running;
@@ -86,6 +90,7 @@ void do_unblock(list_node_t *pcb_node)
 // syscalls for processes
 pid_t do_exec(char *name, int argc, char *argv[])
 {
+    // init pcb
     uint64_t entry_point = load_task_img(name,task_num);
     if (entry_point == 0) return -1;
     pcb[process_id].pid=process_id+1;
@@ -96,8 +101,46 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pcb[process_id].status = TASK_READY;
     pcb[process_id].cursor_x = pcb[process_id].cursor_y = 0;
     pcb[process_id].thread_num = -1;
-    init_pcb_stack(pcb[process_id].kernel_sp, pcb[process_id].user_sp, entry_point,&pcb[process_id]);
     list_add(&ready_queue,&pcb[process_id].list);
+    // copy argv to user_stack
+    char *p[argc];
+    for (int i=0;i<argc;i++)
+    {
+        int len=strlen(argv[i])+1;
+        pcb[process_id].user_sp-=len;
+        strcpy((char*)pcb[process_id].user_sp,argv[i]);
+        p[i]=(char*)pcb[process_id].user_sp;
+    }
+    pcb[process_id].user_sp-=sizeof(p);
+    memcpy((uint8_t*)pcb[process_id].user_sp,(uint8_t*)p,sizeof(p));
+    reg_t addr_argv=(reg_t)pcb[process_id].user_sp;
+    // align sp
+    pcb[process_id].user_sp-=pcb[process_id].user_sp%128;
+    // init pcb_stack
+    ptr_t kernel_stack = pcb[process_id].kernel_sp;
+    ptr_t user_stack = pcb[process_id].user_sp;
+    regs_context_t *pt_regs =
+        (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
+    for (int i = 0; i < 32; i++)
+        pt_regs->regs[i] = 0;
+    pt_regs->regs[2] = (reg_t)user_stack;             // sp
+    pt_regs->regs[4] = (reg_t)&pcb[process_id];       // tp
+    pt_regs->regs[10] = (reg_t)argc;                  // a0
+    pt_regs->regs[11] = addr_argv;                    // a1
+    // special registers
+    pt_regs->sstatus = SR_SPIE & ~SR_SPP;             // make spie(1) and spp(0)
+    pt_regs->sepc = (reg_t)entry_point;
+    pt_regs->sbadaddr = 0;
+    pt_regs->scause = 0;
+
+    switchto_context_t *pt_switchto =
+        (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
+    for (int i = 2; i < 14; i++)
+        pt_switchto->regs[i] = 0;
+    pt_switchto->regs[0] = (reg_t)ret_from_exception; // ra
+    pt_switchto->regs[1] = (reg_t)user_stack;         // sp
+    pcb[process_id].kernel_sp = (ptr_t)pt_switchto;
+
     return ++process_id;
 }
 
@@ -113,7 +156,7 @@ void do_exit(void)
 
 int do_waitpid(pid_t pid)
 {
-
+    while (1);
 }
 
 void do_process_show()
