@@ -13,6 +13,7 @@ void init_locks(void)
         mlocks[i].lock.status=UNLOCKED;
         list_init(&mlocks[i].block_queue);
         mlocks[i].key=-1;
+        mlocks[i].pid=-1;
     }
 }
 
@@ -58,6 +59,7 @@ void do_mutex_lock_acquire(int mlock_idx)
     while (mlocks[mlock_idx].lock.status==LOCKED) 
         do_block(&current_running->list,&mlocks[mlock_idx].block_queue);
     mlocks[mlock_idx].lock.status=LOCKED;
+    mlocks[mlock_idx].pid=current_running->pid;
 }
 
 void do_mutex_lock_release(int mlock_idx)
@@ -66,6 +68,7 @@ void do_mutex_lock_release(int mlock_idx)
     while (!list_empty(&mlocks[mlock_idx].block_queue))
         do_unblock(mlocks[mlock_idx].block_queue.prev);
     mlocks[mlock_idx].lock.status=UNLOCKED;
+    mlocks[mlock_idx].pid=-1;
 }
 
 // syscalls for barrier

@@ -47,6 +47,7 @@ typedef struct mutex_lock
     spin_lock_t lock;
     list_head block_queue;
     int key;
+    int pid;
 } mutex_lock_t;
 
 void init_locks(void);

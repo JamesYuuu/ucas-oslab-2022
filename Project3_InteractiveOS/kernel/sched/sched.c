@@ -23,6 +23,8 @@ LIST_HEAD(sleep_queue);
 
 extern void ret_from_exception();
 
+extern mutex_lock_t mlocks[LOCK_NUM];
+
 /* current running task PCB */
 pcb_t * volatile current_running;
 
@@ -154,6 +156,9 @@ int do_kill(pid_t pid)
     // release all the wait_pid
     while (!list_empty(&pcb[pid-1].wait_list))
         do_unblock(pcb[pid-1].wait_list.prev);
+    // release acquired locks
+    for (int i=0;i<LOCK_NUM;i++)
+        if (mlocks[i].pid==pid) do_mutex_lock_release(i);
     return pid;
 }
 
@@ -162,6 +167,8 @@ void do_exit(void)
     current_running->status=TASK_EXITED;
     while (!list_empty(&current_running->wait_list))
         do_unblock(current_running->wait_list.prev);
+    for (int i=0;i<LOCK_NUM;i++)
+        if (mlocks[i].pid==current_running->pid) do_mutex_lock_release(i);
     do_scheduler();
 }
 
