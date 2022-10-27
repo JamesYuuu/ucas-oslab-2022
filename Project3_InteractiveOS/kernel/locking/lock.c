@@ -4,6 +4,9 @@
 #include <atomic.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
+barrier_t barriers[BARRIER_NUM];
+condition_t conditions[CONDITION_NUM];
+mailbox_t mailboxes[MBOX_NUM];
 
 void init_locks(void)
 {
@@ -17,6 +20,7 @@ void init_locks(void)
     }
 }
 
+// note: no need to perform spinlock as we had perform mutex lock;
 void spin_lock_init(spin_lock_t *lock)
 {
     /* TODO: [p2-task2] initialize spin lock */
@@ -74,20 +78,46 @@ void do_mutex_lock_release(int mlock_idx)
 // syscalls for barrier
 void init_barriers(void)
 {
-
+    /* Initialize barriers */
+    for (int i=0;i<BARRIER_NUM;i++)
+    {
+        barriers[i].is_use=0;
+        list_init(&barriers[i].block_queue);
+    }
 }
 
 int do_barrier_init(int key, int goal)
 {
-
+    for (int i=0;i<BARRIER_NUM;i++)
+        if (barriers[i].is_use==0)
+        {
+            barriers[i].is_use=1;
+            barriers[i].key=key;
+            barriers[i].goal=goal;
+            barriers[i].wait_num=0;
+            return i;
+        }
+    return -1;
 }
 void do_barrier_wait(int bar_idx)
 {
-
+    barriers[bar_idx].wait_num++;
+    if (barriers[bar_idx].wait_num!=barriers[bar_idx].goal)
+        do_block(&current_running->list,&barriers[bar_idx].block_queue);
+    else 
+    {
+        while (!list_empty(&barriers[bar_idx].block_queue))
+            do_unblock(barriers[bar_idx].block_queue.prev);
+        barriers[bar_idx].wait_num=0;
+    }
+    return;
 }
 void do_barrier_destroy(int bar_idx)
 {
-
+    if (barriers[bar_idx].wait_num!=barriers[bar_idx].goal) 
+        barriers[bar_idx].wait_num=barriers[bar_idx].goal;
+    barriers[bar_idx].is_use=0;
+    return;
 }
 
 // syscalls for condition

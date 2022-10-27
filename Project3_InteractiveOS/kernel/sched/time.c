@@ -41,7 +41,7 @@ void check_sleeping(void)
         if (pcb->wakeup_time<=get_timer())
         {
             list_node_t *temp_node=temp_queue->prev;
-            list_del(temp_queue->prev);
+            list_del(temp_node);
             list_add(&ready_queue,temp_node);
             pcb->status=TASK_READY;
         }

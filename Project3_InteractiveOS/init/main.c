@@ -210,6 +210,18 @@ int main(void)
     init_locks();
     printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
+    // Init barrier mechanism (｡•ˇ‸ˇ•｡)
+    init_barriers();
+    printk("> [INIT] Barrier mechanism initialization succeeded.\n");
+
+    // Init condition variable mechanism (｡•ˇ‸ˇ•｡)
+    init_conditions();
+    printk("> [INIT] Condition variable mechanism initialization succeeded.\n");
+
+    // Init mailbox mechanism (｡•ˇ‸ˇ•｡)
+    init_mbox();
+    printk("> [INIT] Mailbox mechanism initialization succeeded.\n");
+
     // Init interrupt (^_^)
     init_exception();
     printk("> [INIT] Interrupt processing initialization succeeded.\n");

@@ -41,18 +41,32 @@ void do_scheduler(void)
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
     check_sleeping();
     // TODO: [p2-task1] Modify the current_running pointer.
-    if (list_empty(&ready_queue)) return;     // If there is no task in the ready queue, return
-
+    // If there is no task in ready_queue but current_running is running 
+    // then their is no need to switch
+    if (list_empty(&ready_queue) && current_running->status==TASK_RUNNING) return;
+    // If there is no task in the ready queue, wait for sleep processes
+    // then what to do if their is no sleeping processes and the shell is blocked?
+    while (list_empty(&ready_queue))
+        check_sleeping();     
+    // If current_running is running and it's not kernel
+    // re-add it to the ready_queue
+    // else which means it's already in ready_queue or sleep_queue or other block_queue
     pcb_t *prev_running=current_running;
-    list_node_t *current_list=ready_queue.prev;        //ready_queue.prev is the first node of the queue
-    list_del(current_list);
-    current_running=list_to_pcb(current_list);
-    current_running->status = TASK_RUNNING;
     if (prev_running->pid!=0 && prev_running->status==TASK_RUNNING)  //make sure the kernel stays outside the ready_queue
     {
         prev_running->status=TASK_READY;
         list_add(&ready_queue,&prev_running->list); //add the prev_running to the end of the queue
     }
+    // find the next task to run
+    // make sure set current_running status to TASK_RUNNING
+    // after check if prev_running status is TASK_RUNNING
+    // because prev_running might be the same as current_running and
+    // it might be re-add to ready_queue by other syscalls
+    list_node_t *current_list=ready_queue.prev;        //ready_queue.prev is the first node of the queue
+    list_del(current_list);
+    current_running=list_to_pcb(current_list);
+    current_running->status = TASK_RUNNING;
+
     // TODO: [p2-task1] switch_to current_running
     switch_to(prev_running,current_running);
 
