@@ -15,18 +15,18 @@ clear:
 
 end:
     /* TODO: [p1-task3] enter main function */
-    addi sp,sp,-16
-    sw ra,12(sp)
+    # addi sp,sp,-16
+    # sw ra,12(sp)
     call main
 
     /* TODO: [p1-task3] finish task and return to the kernel */
-    lw ra,12(sp)
-    addi sp,sp,16
-    ret
+    # lw ra,12(sp)
+    # addi sp,sp,16
     
     /* NOTE: You need to replace this with new mechanism in p3-task2! */
 
     /* TODO: [P3] call sys_exit */
+    call sys_exit
 
 // while(1) loop, unreachable here
 loop:

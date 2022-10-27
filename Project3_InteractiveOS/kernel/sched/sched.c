@@ -101,6 +101,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pcb[process_id].status = TASK_READY;
     pcb[process_id].cursor_x = pcb[process_id].cursor_y = 0;
     pcb[process_id].thread_num = -1;
+    list_init(&pcb[process_id].wait_list);
     list_add(&ready_queue,&pcb[process_id].list);
     // copy argv to user_stack
     char *p[argc];
@@ -151,12 +152,15 @@ int do_kill(pid_t pid)
 
 void do_exit(void)
 {
-
+    current_running->status=TASK_EXITED;
+    do_scheduler();
 }
 
 int do_waitpid(pid_t pid)
 {
-    while (1);
+    if (pid<=1 || pid>process_id) return 0;
+    do_block(current_running,&pcb[pid].wait_list);
+    return pid;
 }
 
 void do_process_show()
