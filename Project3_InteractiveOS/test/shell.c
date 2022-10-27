@@ -87,7 +87,7 @@ void init_buffer()
 {
     len=0;
     bzero(command_buffer,BUFFER_MAX);
-    for (int i = 0; i < argc; ++i)
+    for (int i = 0; i < ARG_MAX; ++i)
         bzero(argv[i],ARG_LEN);
     argc=0;
     printf("> root@UCAS_OS: ");
@@ -132,6 +132,13 @@ void execute_command()
     // command exec
     if (strcmp(argv[0],"exec")==0)
     {
+        // check if waitpid is needed
+        int need_wait=1; 
+        if (strcmp(argv[argc-1],"&")==0)
+        {
+            argc--;
+            need_wait=0;
+        }
         // remove 'exec' from argv
         char *p[argc-1];
         for (int i=1;i<argc;i++)
@@ -139,6 +146,15 @@ void execute_command()
         int pid=sys_exec(argv[1],argc-1,p);
         if (pid!=0) printf("Info: Execute %s successfully, pid=%d\n",argv[1],pid);
             else printf("Error: Execute %s failed\n",argv[1]);
+        if (need_wait) sys_waitpid(pid);
+        return;
+    }
+    // command kill
+    if (strcmp(argv[0],"kill")==0)
+    {
+        int pid=atoi(argv[1]);
+        if (sys_kill(pid)!=0) printf("Info: Kill process %d successfully\n",pid);
+            else printf("Error: Kill process %d failed\n",pid);
         return;
     }
 

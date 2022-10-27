@@ -147,19 +147,29 @@ pid_t do_exec(char *name, int argc, char *argv[])
 
 int do_kill(pid_t pid)
 {
-   
+    if (pid<=1 || pid>process_id) return 0;
+    if (pcb[pid-1].status==TASK_EXITED) return pid;
+    pcb[pid-1].status = TASK_EXITED;
+    list_del(&pcb[pid-1].list);
+    // release all the wait_pid
+    while (!list_empty(&pcb[pid-1].wait_list))
+        do_unblock(pcb[pid-1].wait_list.prev);
+    return pid;
 }
 
 void do_exit(void)
 {
     current_running->status=TASK_EXITED;
+    while (!list_empty(&current_running->wait_list))
+        do_unblock(current_running->wait_list.prev);
     do_scheduler();
 }
 
 int do_waitpid(pid_t pid)
 {
     if (pid<=1 || pid>process_id) return 0;
-    do_block(current_running,&pcb[pid].wait_list);
+    if (pcb[pid-1].status!=TASK_EXITED)
+        do_block(&current_running->list,&pcb[pid-1].wait_list);
     return pid;
 }
 
