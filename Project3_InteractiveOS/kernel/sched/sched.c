@@ -57,19 +57,17 @@ void do_scheduler(void)
         prev_running->status=TASK_READY;
         list_add(&ready_queue,&prev_running->list); //add the prev_running to the end of the queue
     }
-    // find the next task to run
-    // make sure set current_running status to TASK_RUNNING
-    // after check if prev_running status is TASK_RUNNING
+    // Find the next task to run
+    // Make sure set current_running's status to TASK_RUNNING
+    // AFTER check if prev_running's status is TASK_RUNNING
     // because prev_running might be the same as current_running and
     // it might be re-add to ready_queue by other syscalls
     list_node_t *current_list=ready_queue.prev;        //ready_queue.prev is the first node of the queue
     list_del(current_list);
     current_running=list_to_pcb(current_list);
     current_running->status = TASK_RUNNING;
-
     // TODO: [p2-task1] switch_to current_running
     switch_to(prev_running,current_running);
-
 }
 
 void do_sleep(uint32_t sleep_time)
@@ -149,7 +147,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pt_regs->sepc = (reg_t)entry_point;
     pt_regs->sbadaddr = 0;
     pt_regs->scause = 0;
-
+    // init switch_to context
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
     for (int i = 2; i < 14; i++)
@@ -163,14 +161,17 @@ pid_t do_exec(char *name, int argc, char *argv[])
 
 int do_kill(pid_t pid)
 {
+    // Note that we can't kill kernel, shell or process that not exist
     if (pid<=1 || pid>process_id) return 0;
+    // Note that we don't need to kill the process that is EXITED
     if (pcb[pid-1].status==TASK_EXITED) return pid;
     pcb[pid-1].status = TASK_EXITED;
+    // Delete the process from it's queue (ready_queue or sleep_queue or some block_queue)
     list_del(&pcb[pid-1].list);
-    // release all the wait_pid
+    // Release all the waiting process
     while (!list_empty(&pcb[pid-1].wait_list))
         do_unblock(pcb[pid-1].wait_list.prev);
-    // release acquired locks
+    // Release acquired locks
     for (int i=0;i<LOCK_NUM;i++)
         if (mlocks[i].pid==pid) do_mutex_lock_release(i);
     return pid;
@@ -179,16 +180,21 @@ int do_kill(pid_t pid)
 void do_exit(void)
 {
     current_running->status=TASK_EXITED;
+    // Unblock all the waiting process
     while (!list_empty(&current_running->wait_list))
         do_unblock(current_running->wait_list.prev);
+    // Release all the acquired locks
     for (int i=0;i<LOCK_NUM;i++)
         if (mlocks[i].pid==current_running->pid) do_mutex_lock_release(i);
+    // Find the next process to run
     do_scheduler();
 }
 
 int do_waitpid(pid_t pid)
 {
+    // Note that we can't wait for kernel, shell or process that not exist
     if (pid<=1 || pid>process_id) return 0;
+    // Note that we don't need to wait for a EXITED process
     if (pcb[pid-1].status!=TASK_EXITED)
         do_block(&current_running->list,&pcb[pid-1].wait_list);
     return pid;

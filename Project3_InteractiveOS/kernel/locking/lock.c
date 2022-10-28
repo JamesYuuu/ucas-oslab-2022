@@ -11,6 +11,8 @@ mailbox_t mailboxes[MBOX_NUM];
 void init_locks(void)
 {
     /* TODO: [p2-task2] initialize mlocks */
+    // Note that key=-1 means the lock is not used
+    // Note that pid=-1 means the lock is not acquired
     for (int i=0;i<LOCK_NUM;i++)
     {
         mlocks[i].lock.status=UNLOCKED;
@@ -20,7 +22,7 @@ void init_locks(void)
     }
 }
 
-// note: no need to perform spinlock as we had perform mutex lock;
+// Note: no need to perform spinlock as we had perform mutex lock;
 void spin_lock_init(spin_lock_t *lock)
 {
     /* TODO: [p2-task2] initialize spin lock */
@@ -45,9 +47,10 @@ void spin_lock_release(spin_lock_t *lock)
 int do_mutex_lock_init(int key)
 {
     /* TODO: [p2-task2] initialize mutex lock */
+    // First, find the lock with the same key
     for (int i=0;i<LOCK_NUM;i++)
        if (mlocks[i].key==key) return i;
-
+    // Second, find the unused lock
     for (int i=0;i<LOCK_NUM;i++)
        if (mlocks[i].key==-1)
        {
@@ -60,8 +63,10 @@ int do_mutex_lock_init(int key)
 void do_mutex_lock_acquire(int mlock_idx)
 {
     /* TODO: [p2-task2] acquire mutex lock */
+    // Continuously block the process if the lock is acquired
     while (mlocks[mlock_idx].lock.status==LOCKED) 
         do_block(&current_running->list,&mlocks[mlock_idx].block_queue);
+    // Acquire the lock
     mlocks[mlock_idx].lock.status=LOCKED;
     mlocks[mlock_idx].pid=current_running->pid;
 }
@@ -69,8 +74,10 @@ void do_mutex_lock_acquire(int mlock_idx)
 void do_mutex_lock_release(int mlock_idx)
 {
     /* TODO: [p2-task2] release mutex lock */
+    // Release all the blocked process
     while (!list_empty(&mlocks[mlock_idx].block_queue))
         do_unblock(mlocks[mlock_idx].block_queue.prev);
+    // Release the lock
     mlocks[mlock_idx].lock.status=UNLOCKED;
     mlocks[mlock_idx].pid=-1;
 }
@@ -114,8 +121,9 @@ void do_barrier_wait(int bar_idx)
 }
 void do_barrier_destroy(int bar_idx)
 {
-    if (barriers[bar_idx].wait_num!=barriers[bar_idx].goal) 
-        barriers[bar_idx].wait_num=barriers[bar_idx].goal;
+    // Release all the blocked process
+    while (!list_empty(&barriers[bar_idx].block_queue))
+        do_unblock(barriers[bar_idx].block_queue.prev);
     barriers[bar_idx].is_use=0;
     return;
 }
