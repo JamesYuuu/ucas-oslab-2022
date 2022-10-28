@@ -95,6 +95,11 @@ void init_barriers(void)
 
 int do_barrier_init(int key, int goal)
 {
+    // First, find the barrier with the same key
+    for (int i=0;i<BARRIER_NUM;i++)
+        if (barriers[i].is_use==1 && barriers[i].key==key) 
+            return i;
+    // Second, find the unused barrier
     for (int i=0;i<BARRIER_NUM;i++)
         if (barriers[i].is_use==0)
         {
@@ -131,28 +136,61 @@ void do_barrier_destroy(int bar_idx)
 // syscalls for condition
 void init_conditions(void)
 {
-
+    /* Initialize conditions */
+    for (int i=0;i<CONDITION_NUM;i++)
+    {
+        conditions[i].is_use=0;
+        list_init(&conditions[i].block_queue);
+    }
 }
 
 int do_condition_init(int key)
 {
-
+    // First, find the condition with the same key
+    for (int i=0;i<CONDITION_NUM;i++)
+        if (conditions[i].is_use==1 && conditions[i].key==key) 
+            return i;
+    // Second, find the unused condition
+    for (int i=0;i<CONDITION_NUM;i++)
+        if (conditions[i].is_use==0)
+        {
+            conditions[i].is_use=1;
+            conditions[i].key=key;
+            return i;
+        }
+    return -1;
 }
 void do_condition_wait(int cond_idx, int mutex_idx)
 {
-
+    // Release the mutex lock
+    do_mutex_lock_release(mutex_idx);
+    // Block the process
+    do_block(&current_running->list,&conditions[cond_idx].block_queue);
+    // Acquire the mutex lock
+    do_mutex_lock_acquire(mutex_idx);
+    return;
 }
 void do_condition_signal(int cond_idx)
 {
-
+    // Release the first blocked process
+    if (!list_empty(&conditions[cond_idx].block_queue))
+        do_unblock(conditions[cond_idx].block_queue.prev);
+    return;
 }
 void do_condition_broadcast(int cond_idx)
 {
-
+    // Release all the blocked process
+    while (!list_empty(&conditions[cond_idx].block_queue))
+        do_unblock(conditions[cond_idx].block_queue.prev);
+    return;
 }
 void do_condition_destroy(int cond_idx)
 {
-
+    // Release all the blocked process
+    while (!list_empty(&conditions[cond_idx].block_queue))
+        do_unblock(conditions[cond_idx].block_queue.prev);
+    conditions[cond_idx].is_use=0;
+    return;
 }
 
 // syscalls for mailbox
