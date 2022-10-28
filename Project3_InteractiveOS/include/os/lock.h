@@ -100,6 +100,11 @@ void do_condition_destroy(int cond_idx);
 typedef struct mailbox
 {
     // TODO [P3-TASK2 mailbox]
+    char *name;                     // name
+    int is_use;                     // is being used?
+    int length;                     // current length
+    int max_length;                 // max length
+    char buffer[MAX_MBOX_LENGTH];   // buffer
 } mailbox_t;
 
 #define MBOX_NUM 16

@@ -196,15 +196,34 @@ void do_condition_destroy(int cond_idx)
 // syscalls for mailbox
 void init_mbox()
 {
-
+    /* Initialize mailboxes */
+    for (int i=0;i<MBOX_NUM;i++)
+    {
+        mailboxes[i].is_use=0;
+        mailboxes[i].max_length=MAX_MBOX_LENGTH;
+        mailboxes[i].length=0;
+    }
 }
 int do_mbox_open(char *name)
 {
-
+    // First, find the mailbox with the same name
+    for (int i=0;i<MBOX_NUM;i++)
+        if (mailboxes[i].is_use==1 && strcmp(mailboxes[i].name,name)==0) 
+            return i;
+    // Second, find the unused mailbox
+    for (int i=0;i<MBOX_NUM;i++)
+        if (mailboxes[i].is_use==0)
+        {
+            mailboxes[i].is_use=1;
+            strcpy(mailboxes[i].name,name);
+            return i;
+        }
+    return -1;
 }
 void do_mbox_close(int mbox_idx)
 {
-
+    mailboxes[mbox_idx].is_use=0;
+    return;
 }
 int do_mbox_send(int mbox_idx, void * msg, int msg_length)
 {

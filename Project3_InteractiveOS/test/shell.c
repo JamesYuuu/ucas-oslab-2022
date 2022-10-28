@@ -118,9 +118,16 @@ void execute_command()
     // command clear
     if (strcmp(argv[0],"clear")==0)
     {
-        sys_clear(SHELL_BEGIN);
-        sys_move_cursor(0, SHELL_BEGIN);
-        printf("------------------- COMMAND -------------------\n");
+        int clear_line=SHELL_BEGIN;
+        if (argc!=1) clear_line=atoi(argv[1]);
+        sys_clear(clear_line);
+        if (clear_line<=SHELL_BEGIN)
+        {
+            sys_move_cursor(0, SHELL_BEGIN);
+            printf("------------------- COMMAND -------------------\n");
+        }
+        else
+            sys_move_cursor(0, clear_line);
         return;
     }
     // command ps
