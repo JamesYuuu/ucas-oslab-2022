@@ -106,7 +106,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
 {
     // init pcb
     uint64_t entry_point = load_task_img(name,task_num);
-    if (entry_point == 0) return -1;
+    if (entry_point == 0) return 0;
     pcb[process_id].pid=process_id+1;
     pcb[process_id].kernel_sp = allocKernelPage(1);
     pcb[process_id].user_sp = allocUserPage(1);
