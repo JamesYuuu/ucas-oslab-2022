@@ -135,6 +135,4 @@ extern int do_waitpid(pid_t pid);
 extern void do_process_show();
 extern pid_t do_getpid();
 
-extern short task_num;
-
 #endif

@@ -84,6 +84,7 @@ static void init_task_info(void)
     {
         tasks[i] = *((task_info_t *)(unsigned long)(TASK_ADDRESS + offset));
         offset += sizeof(task_info_t);
+        load_task_img(tasks[i].task_name,task_num);
     }
 }
 

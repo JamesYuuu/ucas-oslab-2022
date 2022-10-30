@@ -9,6 +9,7 @@
 #include <os/loader.h>
 #include <csr.h>
 #include <os/string.h>
+#include <os/task.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
@@ -105,7 +106,13 @@ void do_unblock(list_node_t *pcb_node)
 pid_t do_exec(char *name, int argc, char *argv[])
 {
     // init pcb
-    uint64_t entry_point = load_task_img(name,task_num);
+    uint64_t entry_point = 0;
+    for (int i=0;i<task_num;i++)
+        if (strcmp(tasks[i].task_name,name)==0)
+        {
+            entry_point = tasks[i].entry_point;
+            break;
+        }
     if (entry_point == 0) return 0;
     pcb[process_id].pid=process_id+1;
     pcb[process_id].kernel_sp = allocKernelPage(1);

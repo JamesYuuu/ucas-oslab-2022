@@ -1,6 +1,7 @@
 #include <os/lock.h>
 #include <os/sched.h>
 #include <os/list.h>
+#include <os/string.h>
 #include <atomic.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
@@ -202,6 +203,8 @@ void init_mbox()
         mailboxes[i].is_use=0;
         mailboxes[i].max_length=MAX_MBOX_LENGTH;
         mailboxes[i].length=0;
+        list_init(&mailboxes[i].recv_queue);
+        list_init(&mailboxes[i].send_queue);
     }
 }
 int do_mbox_open(char *name)
@@ -223,13 +226,36 @@ int do_mbox_open(char *name)
 void do_mbox_close(int mbox_idx)
 {
     mailboxes[mbox_idx].is_use=0;
+    mailboxes[mbox_idx].length=0;
+    // Release all the blocked reveive process
+    while (!list_empty(&mailboxes[mbox_idx].recv_queue))
+        do_unblock(mailboxes[mbox_idx].recv_queue.prev);
+    // Release all the blocked send process
+    while (!list_empty(&mailboxes[mbox_idx].send_queue))
+        do_unblock(mailboxes[mbox_idx].send_queue.prev);
     return;
 }
 int do_mbox_send(int mbox_idx, void * msg, int msg_length)
 {
-
+    if (msg_length>mailboxes[mbox_idx].max_length-mailboxes[mbox_idx].length)
+    {
+        do_block(&current_running->list,&mailboxes[mbox_idx].send_queue);
+        while (msg_length>mailboxes[mbox_idx].max_length-mailboxes[mbox_idx].length);
+        do_unblock(mailboxes[mbox_idx].recv_queue.prev);
+    }
+    memcpy(mailboxes[mbox_idx].buffer+mailboxes[mbox_idx].length,msg,msg_length);
+    mailboxes[mbox_idx].length+=msg_length;
+    return 0;
 }
 int do_mbox_recv(int mbox_idx, void * msg, int msg_length)
 {
-    
+    if (msg_length>mailboxes[mbox_idx].length)
+    {
+        do_block(&current_running->list,&mailboxes[mbox_idx].recv_queue);
+        while (msg_length>mailboxes[mbox_idx].length);
+        do_unblock(mailboxes[mbox_idx].send_queue.prev);
+    }
+    mailboxes[mbox_idx].length-=msg_length;
+    memcpy(msg,mailboxes[mbox_idx].buffer+mailboxes[mbox_idx].length,msg_length);
+    return 0;
 }
