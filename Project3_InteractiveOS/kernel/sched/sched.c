@@ -114,39 +114,47 @@ pid_t do_exec(char *name, int argc, char *argv[])
             break;
         }
     if (entry_point == 0) return 0;
-    pcb[process_id].pid=process_id+1;
-    pcb[process_id].kernel_sp = allocKernelPage(1);
-    pcb[process_id].user_sp = allocUserPage(1);
-    pcb[process_id].kernel_stack_base = pcb[process_id].kernel_sp;
-    pcb[process_id].user_stack_base = pcb[process_id].user_sp;
-    pcb[process_id].status = TASK_READY;
-    pcb[process_id].cursor_x = pcb[process_id].cursor_y = 0;
-    pcb[process_id].thread_num = -1;
-    list_init(&pcb[process_id].wait_list);
-    list_add(&ready_queue,&pcb[process_id].list);
+    int freepcb=0;
+    for (int i=1;i<NUM_MAX_TASK;i++)
+        if (pcb[i].is_used==0)
+        {
+            freepcb=i;
+            break;
+        }
+    if (freepcb==0) return 0;
+    pcb[freepcb].pid=++process_id;
+    pcb[freepcb].kernel_sp = allocKernelPage(1);
+    pcb[freepcb].user_sp = allocUserPage(1);
+    pcb[freepcb].kernel_stack_base = pcb[freepcb].kernel_sp;
+    pcb[freepcb].user_stack_base = pcb[freepcb].user_sp;
+    pcb[freepcb].status = TASK_READY;
+    pcb[freepcb].cursor_x = pcb[freepcb].cursor_y = 0;
+    pcb[freepcb].thread_num = -1;
+    list_init(&pcb[freepcb].wait_list);
+    list_add(&ready_queue,&pcb[freepcb].list);
     // copy argv to user_stack
     char *p[argc];
     for (int i=0;i<argc;i++)
     {
         int len=strlen(argv[i])+1;
-        pcb[process_id].user_sp-=len;
-        strcpy((char*)pcb[process_id].user_sp,argv[i]);
-        p[i]=(char*)pcb[process_id].user_sp;
+        pcb[freepcb].user_sp-=len;
+        strcpy((char*)pcb[freepcb].user_sp,argv[i]);
+        p[i]=(char*)pcb[freepcb].user_sp;
     }
-    pcb[process_id].user_sp-=sizeof(p);
-    memcpy((uint8_t*)pcb[process_id].user_sp,(uint8_t*)p,sizeof(p));
-    reg_t addr_argv=(reg_t)pcb[process_id].user_sp;
+    pcb[freepcb].user_sp-=sizeof(p);
+    memcpy((uint8_t*)pcb[freepcb].user_sp,(uint8_t*)p,sizeof(p));
+    reg_t addr_argv=(reg_t)pcb[freepcb].user_sp;
     // align sp
-    pcb[process_id].user_sp-=pcb[process_id].user_sp%128;
+    pcb[freepcb].user_sp-=pcb[freepcb].user_sp%128;
     // init pcb_stack
-    ptr_t kernel_stack = pcb[process_id].kernel_sp;
-    ptr_t user_stack = pcb[process_id].user_sp;
+    ptr_t kernel_stack = pcb[freepcb].kernel_sp;
+    ptr_t user_stack = pcb[freepcb].user_sp;
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
     for (int i = 0; i < 32; i++)
         pt_regs->regs[i] = 0;
     pt_regs->regs[2] = (reg_t)user_stack;             // sp
-    pt_regs->regs[4] = (reg_t)&pcb[process_id];       // tp
+    pt_regs->regs[4] = (reg_t)&pcb[freepcb];       // tp
     pt_regs->regs[10] = (reg_t)argc;                  // a0
     pt_regs->regs[11] = addr_argv;                    // a1
     // special registers
@@ -161,15 +169,16 @@ pid_t do_exec(char *name, int argc, char *argv[])
         pt_switchto->regs[i] = 0;
     pt_switchto->regs[0] = (reg_t)ret_from_exception; // ra
     pt_switchto->regs[1] = (reg_t)user_stack;         // sp
-    pcb[process_id].kernel_sp = (ptr_t)pt_switchto;
+    pcb[freepcb].kernel_sp = (ptr_t)pt_switchto;
+    pcb[freepcb].is_used = 1;
 
-    return ++process_id;
+    return process_id;
 }
 
 int do_kill(pid_t pid)
 {
     // Note that we can't kill kernel, shell or process that not exist
-    if (pid<=1 || pid>process_id) return 0;
+    if (pid<=1 || pcb[pid].is_used==0) return 0;
     // Note that we don't need to kill the process that is EXITED
     if (pcb[pid-1].status==TASK_EXITED) return pid;
     pcb[pid-1].status = TASK_EXITED;
@@ -181,6 +190,8 @@ int do_kill(pid_t pid)
     // Release acquired locks
     for (int i=0;i<LOCK_NUM;i++)
         if (mlocks[i].pid==pid) do_mutex_lock_release(i);
+    // Release pcb;
+    pcb[pid-1].is_used=0;
     return pid;
 }
 
@@ -193,6 +204,8 @@ void do_exit(void)
     // Release all the acquired locks
     for (int i=0;i<LOCK_NUM;i++)
         if (mlocks[i].pid==current_running->pid) do_mutex_lock_release(i);
+    // Release pcb;
+    pcb[current_running->pid-1].is_used=0;
     // Find the next process to run
     do_scheduler();
 }
@@ -200,7 +213,7 @@ void do_exit(void)
 int do_waitpid(pid_t pid)
 {
     // Note that we can't wait for kernel, shell or process that not exist
-    if (pid<=1 || pid>process_id) return 0;
+    if (pid<=1 || pcb[pid].is_used==0) return 0;
     // Note that we don't need to wait for a EXITED process
     if (pcb[pid-1].status!=TASK_EXITED)
         do_block(&current_running->list,&pcb[pid-1].wait_list);
@@ -210,8 +223,9 @@ int do_waitpid(pid_t pid)
 void do_process_show()
 {
     printk("[Process Table]:\n");
-    for (int i=0;i<process_id;i++)
+    for (int i=0;i<NUM_MAX_TASK;i++)
     {
+        if (pcb[i].is_used==0) continue;
         printk("[%d] PID : %d , STATUS : ",i,pcb[i].pid);
         switch (pcb[i].status)
         {
@@ -224,8 +238,7 @@ void do_process_show()
             case TASK_BLOCKED:
                 printk("BLOCKED\n");
                 break;
-            case TASK_EXITED:
-                printk("EXITED\n");
+            default:
                 break;
         }
     }

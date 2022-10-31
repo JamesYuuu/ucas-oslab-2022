@@ -89,6 +89,7 @@ typedef struct pcb
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
 
+    int is_used;
     // [p2-task5] add thread list
 
     int thread_num;
