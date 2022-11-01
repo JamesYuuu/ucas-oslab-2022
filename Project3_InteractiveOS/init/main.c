@@ -126,15 +126,19 @@ static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     // Note that tasks[0] is shell and we only need to load shell
+    for (int i=0;i<TASK_MAXNUM;i++)
+    {
+        pcb[i].kernel_stack_base = allocKernelPage(1);
+        pcb[i].user_stack_base = allocUserPage(1);
+    }
     load_task_img("shell",task_num);
     pcb[0].pid = 1;
-    pcb[0].kernel_sp = allocKernelPage(1);
-    pcb[0].user_sp = allocUserPage(1);
-    pcb[0].kernel_stack_base = pcb[0].kernel_sp;
-    pcb[0].user_stack_base = pcb[0].user_sp;
+    pcb[0].kernel_sp = pcb[0].kernel_stack_base;
+    pcb[0].user_sp = pcb[0].user_stack_base;
     pcb[0].status = TASK_READY;
     pcb[0].cursor_x = pcb[0].cursor_y = 0;
     pcb[0].thread_num = -1;
+    pcb[0].is_used = 1;
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, tasks[0].entry_point, &pcb[0]);
     list_add(&ready_queue, &(pcb[0].list));
     /* TODO: [p2-task1] remember to initialize 'current_running' */

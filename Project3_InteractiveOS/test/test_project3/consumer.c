@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
         int next;
         while((next = rand() % 3) == 0);
         sys_move_cursor(0, print_location);
-        printf("> [TASK] Total consumed %d products. (Sleep %d seconds)", sum_consumption, next);
+        printf("> [TASK] (pid=%d) Total consumed %d products. (Sleep %d seconds)", sys_getpid() , sum_consumption, next);
 
         sys_mutex_release(handle_lock);
         sys_sleep(next);

@@ -123,10 +123,8 @@ pid_t do_exec(char *name, int argc, char *argv[])
         }
     if (freepcb==0) return 0;
     pcb[freepcb].pid=++process_id;
-    pcb[freepcb].kernel_sp = allocKernelPage(1);
-    pcb[freepcb].user_sp = allocUserPage(1);
-    pcb[freepcb].kernel_stack_base = pcb[freepcb].kernel_sp;
-    pcb[freepcb].user_stack_base = pcb[freepcb].user_sp;
+    pcb[freepcb].kernel_sp = pcb[freepcb].kernel_stack_base;
+    pcb[freepcb].user_sp = pcb[freepcb].user_stack_base;
     pcb[freepcb].status = TASK_READY;
     pcb[freepcb].cursor_x = pcb[freepcb].cursor_y = 0;
     pcb[freepcb].thread_num = -1;
@@ -154,7 +152,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
     for (int i = 0; i < 32; i++)
         pt_regs->regs[i] = 0;
     pt_regs->regs[2] = (reg_t)user_stack;             // sp
-    pt_regs->regs[4] = (reg_t)&pcb[freepcb];       // tp
+    pt_regs->regs[4] = (reg_t)&pcb[freepcb];          // tp
     pt_regs->regs[10] = (reg_t)argc;                  // a0
     pt_regs->regs[11] = addr_argv;                    // a1
     // special registers
@@ -177,46 +175,70 @@ pid_t do_exec(char *name, int argc, char *argv[])
 
 int do_kill(pid_t pid)
 {
+    // Find the corresponding pcb
+    int current_pcb=0;
+    for (int i=0;i<TASK_MAXNUM;i++)
+        if (pcb[i].pid==pid && pcb[i].is_used==1)
+        {
+            current_pcb=i;
+            break;
+        }
     // Note that we can't kill kernel, shell or process that not exist
-    if (pid<=1 || pcb[pid].is_used==0) return 0;
+    if (current_pcb==0) return 0;
     // Note that we don't need to kill the process that is EXITED
-    if (pcb[pid-1].status==TASK_EXITED) return pid;
-    pcb[pid-1].status = TASK_EXITED;
+    if (pcb[current_pcb].status==TASK_EXITED) return pid;
+    pcb[current_pcb].status = TASK_EXITED;
+    // Release pcb;
+    pcb[current_pcb].is_used=0;
     // Delete the process from it's queue (ready_queue or sleep_queue or some block_queue)
-    list_del(&pcb[pid-1].list);
+    list_del(&pcb[current_pcb].list);
     // Release all the waiting process
-    while (!list_empty(&pcb[pid-1].wait_list))
-        do_unblock(pcb[pid-1].wait_list.prev);
+    while (!list_empty(&pcb[current_pcb].wait_list))
+        do_unblock(pcb[current_pcb].wait_list.prev);
     // Release acquired locks
     for (int i=0;i<LOCK_NUM;i++)
         if (mlocks[i].pid==pid) do_mutex_lock_release(i);
-    // Release pcb;
-    pcb[pid-1].is_used=0;
     return pid;
 }
 
 void do_exit(void)
 {
+    // Find the corresponding pcb
+    int current_pcb=0;
+    for (int i=0;i<TASK_MAXNUM;i++)
+        if (pcb[i].pid==current_running->pid && pcb[i].is_used==1)
+        {
+            current_pcb=i;
+            break;
+        }
     current_running->status=TASK_EXITED;
+    // Release pcb;
+    pcb[current_pcb].is_used=0;
     // Unblock all the waiting process
     while (!list_empty(&current_running->wait_list))
         do_unblock(current_running->wait_list.prev);
     // Release all the acquired locks
     for (int i=0;i<LOCK_NUM;i++)
         if (mlocks[i].pid==current_running->pid) do_mutex_lock_release(i);
-    // Release pcb;
-    pcb[current_running->pid-1].is_used=0;
     // Find the next process to run
     do_scheduler();
 }
 
 int do_waitpid(pid_t pid)
 {
+    // Find the corresponding pcb
+    int current_pcb=0;
+    for (int i=0;i<TASK_MAXNUM;i++)
+        if (pcb[i].pid==pid && pcb[i].is_used==1)
+        {
+            current_pcb=i;
+            break;
+        }
     // Note that we can't wait for kernel, shell or process that not exist
-    if (pid<=1 || pcb[pid].is_used==0) return 0;
+    if (current_pcb==0) return 0;
     // Note that we don't need to wait for a EXITED process
-    if (pcb[pid-1].status!=TASK_EXITED)
-        do_block(&current_running->list,&pcb[pid-1].wait_list);
+    if (pcb[current_pcb].status!=TASK_EXITED)
+        do_block(&current_running->list,&pcb[current_pcb].wait_list);
     return pid;
 }
 

@@ -237,10 +237,14 @@ void do_mbox_close(int mbox_idx)
 }
 int do_mbox_send(int mbox_idx, void * msg, int msg_length)
 {
+    int block_num=0;
     // If the mailbox has no available space, block the send process.
     // Note that when the process leaves the while the space should be enough.
     while (msg_length>mailboxes[mbox_idx].max_length-mailboxes[mbox_idx].length)
+    {
+        block_num++;
         do_block(&current_running->list,&mailboxes[mbox_idx].send_queue);
+    }
     // Copy the message to the mailbox
     memcpy(mailboxes[mbox_idx].buffer+mailboxes[mbox_idx].length,msg,msg_length);
     mailboxes[mbox_idx].length+=msg_length;
@@ -248,14 +252,18 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length)
     // Let all the blocked receive processes compete for the new message
     while (!list_empty(&mailboxes[mbox_idx].recv_queue))
         do_unblock(mailboxes[mbox_idx].recv_queue.prev);
-    return 0;
+    return block_num;
 }
 int do_mbox_recv(int mbox_idx, void * msg, int msg_length)
 {
+    int block_num=0;
     // If the mailbox has no available message , block the receive process.
     // Note that when the process leaves the while there should be available message.
     while (msg_length>mailboxes[mbox_idx].length)
+    {
+        block_num++;
         do_block(&current_running->list,&mailboxes[mbox_idx].recv_queue);
+    }
     // Copy the message from the mailbox
     mailboxes[mbox_idx].length-=msg_length;
     memcpy(msg,mailboxes[mbox_idx].buffer,msg_length);
@@ -265,5 +273,5 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length)
     // Let all the blocked send processes compete for the spare buffer space    
     while (!list_empty(&mailboxes[mbox_idx].send_queue))
         do_unblock(mailboxes[mbox_idx].send_queue.prev);
-    return 0;
+    return block_num;
 }
