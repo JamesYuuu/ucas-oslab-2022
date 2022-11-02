@@ -257,13 +257,10 @@ int main(void)
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
     // init the lock
-    spin_lock_init(&kernel_lock);
+    smp_init();
 
-    // // Wake up the other cores
-    disable_interrupt();
-    send_ipi(NULL);
-    asm volatile("csrw 0x144,zero");  // clear CSR_SIP to avoid ipi interrupt
-    enable_interrupt();
+    // wakeup_other_hart()
+    wakeup_other_hart();
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's

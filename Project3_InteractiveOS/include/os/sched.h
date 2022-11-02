@@ -31,6 +31,7 @@
 
 #include <type.h>
 #include <os/list.h>
+#include <os/smp.h>
 
 #define NUM_MAX_TASK 16
 #define NUM_MAX_THREAD 4
@@ -107,7 +108,7 @@ extern list_head ready_queue;
 extern list_head sleep_queue;
 
 /* current running task PCB */
-extern pcb_t * volatile current_running[2];
+extern pcb_t * volatile current_running[NR_CPUS];
 extern pid_t process_id;
 
 extern pcb_t pcb[NUM_MAX_TASK];

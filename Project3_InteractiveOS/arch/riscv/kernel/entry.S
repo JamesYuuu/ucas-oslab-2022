@@ -178,8 +178,7 @@ ENDPROC(switch_to)
 ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
-  la a0,kernel_lock
-  call spin_lock_release
+  call unlock_kernel
   RESTORE_CONTEXT
   sret
 ENDPROC(ret_from_exception)
@@ -198,8 +197,7 @@ ENTRY(exception_handler_entry)
    * NOTE: don't forget to pass parameters for it.
    */
 end:
-  la a0,kernel_lock
-  call spin_lock_acquire
+  call lock_kernel
   ld a0,PCB_KERNEL_SP(tp)
   addi a0,a0,SWITCH_TO_SIZE
   csrr a1,CSR_STVAL

@@ -53,7 +53,17 @@ void do_scheduler(void)
     // TODO: [p2-task1] Modify the current_running[cpu_id] pointer.
     // If there is no task in ready_queue but current_running[cpu_id] is running 
     // then their is no need to switch
-    if (list_empty(&ready_queue) && current_running[cpu_id]->status==TASK_RUNNING) return;
+    if (list_empty(&ready_queue))
+    {
+        if (current_running[cpu_id]->status==TASK_RUNNING)
+            return;
+        if (list_empty(&sleep_queue))
+        {
+            unlock_kernel();
+            while (list_empty(&ready_queue));
+            lock_kernel();
+        }
+    }
     // If there is no task in the ready queue, wait for sleep processes
     // then what to do if their is no sleeping processes and the shell is blocked?
     while (list_empty(&ready_queue))
@@ -197,11 +207,13 @@ int do_kill(pid_t pid)
     if (current_pcb==0) return 0;
     // Note that we don't need to kill the process that is EXITED
     if (pcb[current_pcb].status==TASK_EXITED) return pid;
+    // Delete the process from it's queue (ready_queue or sleep_queue or some block_queue)
+    // If it's not running on the other core;
+    if (pcb[current_pcb].status!=TASK_RUNNING)
+        list_del(&pcb[current_pcb].list);
     pcb[current_pcb].status = TASK_EXITED;
     // Release pcb;
     pcb[current_pcb].is_used=0;
-    // Delete the process from it's queue (ready_queue or sleep_queue or some block_queue)
-    list_del(&pcb[current_pcb].list);
     // Release all the waiting process
     while (!list_empty(&pcb[current_pcb].wait_list))
         do_unblock(pcb[current_pcb].wait_list.prev);
