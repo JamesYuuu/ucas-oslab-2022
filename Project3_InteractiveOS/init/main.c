@@ -206,8 +206,6 @@ int main(void)
 
     if (cpu_id == 1) 
     { 
-        spin_lock_acquire(&kernel_lock);
-        printk("Hi, I am cpu1\n");
         setup_exception();
         set_timer(get_ticks() + TIMER_INTERVAL);
         while (1)
@@ -258,13 +256,10 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
-    printk("Hi, I'm cpu%d and I'm going to wake up cpu1\n",cpu_id);
-    
-    // lock the kernel
+    // init the lock
     spin_lock_init(&kernel_lock);
-    spin_lock_acquire(&kernel_lock);
 
-    // Wake up the other cores
+    // // Wake up the other cores
     disable_interrupt();
     send_ipi(NULL);
     asm volatile("csrw 0x144,zero");  // clear CSR_SIP to avoid ipi interrupt

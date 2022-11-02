@@ -198,7 +198,7 @@ ENTRY(exception_handler_entry)
    * NOTE: don't forget to pass parameters for it.
    */
 end:
-  ld a0,kernel_lock
+  la a0,kernel_lock
   call spin_lock_acquire
   ld a0,PCB_KERNEL_SP(tp)
   addi a0,a0,SWITCH_TO_SIZE

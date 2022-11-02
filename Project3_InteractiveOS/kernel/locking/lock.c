@@ -34,7 +34,7 @@ void spin_lock_init(spin_lock_t *lock)
 int spin_lock_try_acquire(spin_lock_t *lock)
 {
     /* TODO: [p2-task2] try to acquire spin lock */
-    return atomic_swap(1, &lock->status);
+    return atomic_swap(LOCKED, &lock->status);
 }
 
 void spin_lock_acquire(spin_lock_t *lock)
