@@ -134,7 +134,6 @@ static void init_pcb(void)
         pcb[i].kernel_stack_base = allocKernelPage(1);
         pcb[i].user_stack_base = allocUserPage(1);
     }
-    load_task_img("shell");
     pcb[0].pid = 1;
     pcb[0].kernel_sp = pcb[0].kernel_stack_base;
     pcb[0].user_sp = pcb[0].user_stack_base;
