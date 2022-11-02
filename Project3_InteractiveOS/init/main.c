@@ -42,6 +42,7 @@
 #include <assert.h>
 #include <type.h>
 #include <csr.h>
+#include <os/smp.h>
 
 extern void ret_from_exception();
 
@@ -49,6 +50,8 @@ extern void ret_from_exception();
 #define TASK_ADDRESS 0x58000000
 task_info_t tasks[TASK_MAXNUM];
 short task_num;
+
+spin_lock_t kernel_lock;
 
 static void init_jmptab(void)
 {
@@ -142,7 +145,8 @@ static void init_pcb(void)
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, tasks[0].entry_point, &pcb[0]);
     list_add(&ready_queue, &(pcb[0].list));
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-    current_running = &pid0_pcb;
+    current_running[0] = &pid0_pcb;
+    current_running[1] = &pid1_pcb;
 }
 
 static void init_syscall(void)
@@ -198,6 +202,21 @@ static void init_syscall(void)
 
 int main(void)
 {
+    int cpu_id = get_current_cpu_id();
+
+    if (cpu_id == 1) 
+    { 
+        spin_lock_acquire(&kernel_lock);
+        printk("Hi, I am cpu1\n");
+        setup_exception();
+        set_timer(get_ticks() + TIMER_INTERVAL);
+        while (1)
+        {
+            enable_preempt();
+            asm volatile("wfi");
+        }
+    }
+
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
 
@@ -238,6 +257,18 @@ int main(void)
     // Init screen (QAQ)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
+
+    printk("Hi, I'm cpu%d and I'm going to wake up cpu1\n",cpu_id);
+    
+    // lock the kernel
+    spin_lock_init(&kernel_lock);
+    spin_lock_acquire(&kernel_lock);
+
+    // Wake up the other cores
+    disable_interrupt();
+    send_ipi(NULL);
+    asm volatile("csrw 0x144,zero");  // clear CSR_SIP to avoid ipi interrupt
+    enable_interrupt();
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's

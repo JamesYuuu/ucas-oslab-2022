@@ -5,6 +5,7 @@
 #include <csr.h>
 #include <os/mm.h>
 #include <asm.h>
+#include <os/smp.h>
 
 #define THREAD_STACK_SIZE 1024
 #define MAX_THREAD_NUM 16
@@ -15,6 +16,7 @@ extern void ret_from_exception();
 
 void create_thread(long entry, long arg) 
 {
+    int cpu_id = get_current_cpu_id();
     ptr_t kernel_stack,user_stack;
 
     kernel_stack = allocKernelPage(1);
@@ -22,7 +24,7 @@ void create_thread(long entry, long arg)
 
     // init regs_context_t by copying from father pcb;
     regs_context_t *pcb_regs =
-        (regs_context_t*)(current_running->kernel_sp+sizeof(switchto_context_t));
+        (regs_context_t*)(current_running[cpu_id]->kernel_sp+sizeof(switchto_context_t));
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
 
@@ -43,7 +45,7 @@ void create_thread(long entry, long arg)
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
     switchto_context_t *pcb_switchto =
-        (switchto_context_t *)(current_running->kernel_sp);
+        (switchto_context_t *)(current_running[cpu_id]->kernel_sp);
     for (int i=0;i<14;i++)
         pt_switchto->regs[i]=pcb_switchto->regs[i];
 
@@ -54,15 +56,15 @@ void create_thread(long entry, long arg)
     // set new thread
     tcb[thread_id].kernel_sp=(ptr_t)pt_switchto;
     tcb[thread_id].user_sp=user_stack;
-    tcb[thread_id].father=current_running;
-    tcb[thread_id].pid=current_running->thread_num+100;
-    tcb[thread_id].cursor_x=current_running->cursor_x;
-    tcb[thread_id].cursor_y=current_running->cursor_y;
+    tcb[thread_id].father=current_running[cpu_id];
+    tcb[thread_id].pid=current_running[cpu_id]->thread_num+100;
+    tcb[thread_id].cursor_x=current_running[cpu_id]->cursor_x;
+    tcb[thread_id].cursor_y=current_running[cpu_id]->cursor_y;
     tcb[thread_id].status=TASK_READY;
 
     // manage father thread
-    current_running->thread_num++;
-    current_running->son[current_running->thread_num]=&tcb[thread_id];
+    current_running[cpu_id]->thread_num++;
+    current_running[cpu_id]->son[current_running[cpu_id]->thread_num]=&tcb[thread_id];
 
     // add new thread to ready_queue
     list_add(&ready_queue,&tcb[thread_id].list);

@@ -10,13 +10,21 @@
 #include <csr.h>
 #include <os/string.h>
 #include <os/task.h>
+#include <os/smp.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
+const ptr_t pid1_stack = INIT_KERNEL_STACK + PAGE_SIZE * 2;
 pcb_t pid0_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t)pid0_stack,
     .user_sp = (ptr_t)pid0_stack
+};
+
+pcb_t pid1_pcb = {
+    .pid = 0,
+    .kernel_sp = (ptr_t)pid1_stack,
+    .user_sp = (ptr_t)pid1_stack
 };
 
 LIST_HEAD(ready_queue);
@@ -27,7 +35,7 @@ extern void ret_from_exception();
 extern mutex_lock_t mlocks[LOCK_NUM];
 
 /* current running task PCB */
-pcb_t * volatile current_running;
+pcb_t * volatile current_running[2];
 
 /* global process id */
 pid_t process_id = 1;
@@ -39,48 +47,50 @@ pcb_t* list_to_pcb(list_node_t *list)
 
 void do_scheduler(void)
 {
+    int cpu_id = get_current_cpu_id();
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
     check_sleeping();
-    // TODO: [p2-task1] Modify the current_running pointer.
-    // If there is no task in ready_queue but current_running is running 
+    // TODO: [p2-task1] Modify the current_running[cpu_id] pointer.
+    // If there is no task in ready_queue but current_running[cpu_id] is running 
     // then their is no need to switch
-    if (list_empty(&ready_queue) && current_running->status==TASK_RUNNING) return;
+    if (list_empty(&ready_queue) && current_running[cpu_id]->status==TASK_RUNNING) return;
     // If there is no task in the ready queue, wait for sleep processes
     // then what to do if their is no sleeping processes and the shell is blocked?
     while (list_empty(&ready_queue))
         check_sleeping();     
-    // If current_running is running and it's not kernel
+    // If current_running[cpu_id] is running and it's not kernel
     // re-add it to the ready_queue
     // else which means it's already in ready_queue or sleep_queue or other block_queue
-    pcb_t *prev_running=current_running;
+    pcb_t *prev_running=current_running[cpu_id];
     if (prev_running->pid!=0 && prev_running->status==TASK_RUNNING)  //make sure the kernel stays outside the ready_queue
     {
         prev_running->status=TASK_READY;
         list_add(&ready_queue,&prev_running->list); //add the prev_running to the end of the queue
     }
     // Find the next task to run
-    // Make sure set current_running's status to TASK_RUNNING
+    // Make sure set current_running[cpu_id]'s status to TASK_RUNNING
     // AFTER check if prev_running's status is TASK_RUNNING
-    // because prev_running might be the same as current_running and
+    // because prev_running might be the same as current_running[cpu_id] and
     // it might be re-add to ready_queue by other syscalls
     list_node_t *current_list=ready_queue.prev;        //ready_queue.prev is the first node of the queue
     list_del(current_list);
-    current_running=list_to_pcb(current_list);
-    current_running->status = TASK_RUNNING;
-    // TODO: [p2-task1] switch_to current_running
-    switch_to(prev_running,current_running);
+    current_running[cpu_id]=list_to_pcb(current_list);
+    current_running[cpu_id]->status = TASK_RUNNING;
+    // TODO: [p2-task1] switch_to current_running[cpu_id]
+    switch_to(prev_running,current_running[cpu_id]);
 }
 
 void do_sleep(uint32_t sleep_time)
 {
+    int cpu_id = get_current_cpu_id();
     // TODO: [p2-task3] sleep(seconds)
     // NOTE: you can assume: 1 second = 1 `timebase` ticks
-    // 1. block the current_running
+    // 1. block the current_running[cpu_id]
     // 2. set the wake up time for the blocked task
-    // 3. reschedule because the current_running is blocked.
-    current_running->status=TASK_BLOCKED;
-    current_running->wakeup_time=get_timer()+sleep_time;
-    list_add(&sleep_queue,&current_running->list);
+    // 3. reschedule because the current_running[cpu_id] is blocked.
+    current_running[cpu_id]->status=TASK_BLOCKED;
+    current_running[cpu_id]->wakeup_time=get_timer()+sleep_time;
+    list_add(&sleep_queue,&current_running[cpu_id]->list);
     do_scheduler();
 }
 
@@ -203,29 +213,31 @@ int do_kill(pid_t pid)
 
 void do_exit(void)
 {
+    int cpu_id = get_current_cpu_id();
     // Find the corresponding pcb
     int current_pcb=0;
     for (int i=0;i<TASK_MAXNUM;i++)
-        if (pcb[i].pid==current_running->pid && pcb[i].is_used==1)
+        if (pcb[i].pid==current_running[cpu_id]->pid && pcb[i].is_used==1)
         {
             current_pcb=i;
             break;
         }
-    current_running->status=TASK_EXITED;
+    current_running[cpu_id]->status=TASK_EXITED;
     // Release pcb;
     pcb[current_pcb].is_used=0;
     // Unblock all the waiting process
-    while (!list_empty(&current_running->wait_list))
-        do_unblock(current_running->wait_list.prev);
+    while (!list_empty(&current_running[cpu_id]->wait_list))
+        do_unblock(current_running[cpu_id]->wait_list.prev);
     // Release all the acquired locks
     for (int i=0;i<LOCK_NUM;i++)
-        if (mlocks[i].pid==current_running->pid) do_mutex_lock_release(i);
+        if (mlocks[i].pid==current_running[cpu_id]->pid) do_mutex_lock_release(i);
     // Find the next process to run
     do_scheduler();
 }
 
 int do_waitpid(pid_t pid)
 {
+    int cpu_id = get_current_cpu_id();
     // Find the corresponding pcb
     int current_pcb=0;
     for (int i=0;i<TASK_MAXNUM;i++)
@@ -238,7 +250,7 @@ int do_waitpid(pid_t pid)
     if (current_pcb==0) return 0;
     // Note that we don't need to wait for a EXITED process
     if (pcb[current_pcb].status!=TASK_EXITED)
-        do_block(&current_running->list,&pcb[current_pcb].wait_list);
+        do_block(&current_running[cpu_id]->list,&pcb[current_pcb].wait_list);
     return pid;
 }
 
@@ -268,5 +280,6 @@ void do_process_show()
 
 pid_t do_getpid()
 {
-    return current_running->pid;
+    int cpu_id = get_current_cpu_id();
+    return current_running[cpu_id]->pid;
 }

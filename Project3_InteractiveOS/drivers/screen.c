@@ -4,6 +4,7 @@
 #include <os/sched.h>
 #include <os/irq.h>
 #include <os/kernel.h>
+#include <os/smp.h>
 
 #define SCREEN_WIDTH    80
 #define SCREEN_HEIGHT   50
@@ -37,20 +38,21 @@ static void vt100_hidden_cursor()
 /* write a char */
 static void screen_write_ch(char ch)
 {
+    int cpu_id = get_current_cpu_id();
     if (ch == '\n')
     {
-        current_running->cursor_x = 0;
-        current_running->cursor_y++;
+        current_running[cpu_id]->cursor_x = 0;
+        current_running[cpu_id]->cursor_y++;
     }
     else if (ch == '\b')
     {
-        current_running->cursor_x--;
-        new_screen[SCREEN_LOC(current_running->cursor_x, current_running->cursor_y)] = ' ';
+        current_running[cpu_id]->cursor_x--;
+        new_screen[SCREEN_LOC(current_running[cpu_id]->cursor_x, current_running[cpu_id]->cursor_y)] = ' ';
     }
     else
     {
-        new_screen[SCREEN_LOC(current_running->cursor_x, current_running->cursor_y)] = ch;
-        current_running->cursor_x++;
+        new_screen[SCREEN_LOC(current_running[cpu_id]->cursor_x, current_running[cpu_id]->cursor_y)] = ch;
+        current_running[cpu_id]->cursor_x++;
     }
 }
 
@@ -63,6 +65,7 @@ void init_screen(void)
 
 void screen_clear(int height)
 {
+    int cpu_id = get_current_cpu_id();
     int i, j;
     for (i = height; i < SCREEN_HEIGHT; i++)
     {
@@ -71,15 +74,16 @@ void screen_clear(int height)
             new_screen[SCREEN_LOC(j, i)] = ' ';
         }
     }
-    current_running->cursor_x = 0;
-    current_running->cursor_y = 0;
+    current_running[cpu_id]->cursor_x = 0;
+    current_running[cpu_id]->cursor_y = 0;
     screen_reflush();
 }
 
 void screen_move_cursor(int x, int y)
 {
-    current_running->cursor_x = x;
-    current_running->cursor_y = y;
+    int cpu_id = get_current_cpu_id();
+    current_running[cpu_id]->cursor_x = x;
+    current_running[cpu_id]->cursor_y = y;
     vt100_move_cursor(x, y);
 }
 
@@ -103,6 +107,7 @@ void screen_write(char *buff)
 void screen_reflush(void)
 {
     int i, j;
+    int cpu_id = get_current_cpu_id();
 
     /* here to reflush screen buffer to serial port */
     for (i = 0; i < SCREEN_HEIGHT; i++)
@@ -120,5 +125,5 @@ void screen_reflush(void)
     }
 
     /* recover cursor position */
-    vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
+    vt100_move_cursor(current_running[cpu_id]->cursor_x, current_running[cpu_id]->cursor_y);
 }
