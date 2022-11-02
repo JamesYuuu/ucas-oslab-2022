@@ -127,7 +127,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
 {
     // init pcb
     uint64_t entry_point = 0;
-    for (int i=0;i<task_num;i++)
+    for (int i=0;i<TASK_MAXNUM;i++)
         if (strcmp(tasks[i].task_name,name)==0)
         {
             entry_point = tasks[i].entry_point;

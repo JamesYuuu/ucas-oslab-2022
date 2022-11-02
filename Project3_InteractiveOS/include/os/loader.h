@@ -3,6 +3,6 @@
 
 #include <type.h>
 
-uint64_t load_task_img(char *taskname,int task_num);
+uint64_t load_task_img(char *taskname);
 
 #endif

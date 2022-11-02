@@ -49,7 +49,6 @@ extern void ret_from_exception();
 // Task info array
 #define TASK_ADDRESS 0x58000000
 task_info_t tasks[TASK_MAXNUM];
-short task_num;
 
 spin_lock_t kernel_lock;
 
@@ -74,6 +73,7 @@ static void init_jmptab(void)
 
 static void init_task_info(void)
 {
+    short task_num;
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
     bios_sdread(TASK_ADDRESS, 1, 0);
@@ -87,7 +87,7 @@ static void init_task_info(void)
     {
         tasks[i] = *((task_info_t *)(unsigned long)(TASK_ADDRESS + offset));
         offset += sizeof(task_info_t);
-        load_task_img(tasks[i].task_name,task_num);
+        load_task_img(tasks[i].task_name);
     }
 }
 
@@ -134,7 +134,7 @@ static void init_pcb(void)
         pcb[i].kernel_stack_base = allocKernelPage(1);
         pcb[i].user_stack_base = allocUserPage(1);
     }
-    load_task_img("shell",task_num);
+    load_task_img("shell");
     pcb[0].pid = 1;
     pcb[0].kernel_sp = pcb[0].kernel_stack_base;
     pcb[0].user_sp = pcb[0].user_stack_base;
@@ -205,7 +205,7 @@ int main(void)
     int cpu_id = get_current_cpu_id();
 
     if (cpu_id == 1) 
-    { 
+    {
         setup_exception();
         set_timer(get_ticks() + TIMER_INTERVAL);
         while (1)

@@ -8,7 +8,7 @@
 
 #define KERNEL_STACK		0x50500000
 
-#define KERNEL_STACK_1        0x50500100
+#define KERNEL_STACK_1        0x50502000
 
 .section ".entry_function","ax"
 ENTRY(_start)
@@ -16,8 +16,7 @@ ENTRY(_start)
     csrw CSR_SIE, zero
     csrw CSR_SIP, zero
     // If cpu is core1 then no need to clear BSS
-    csrr s0, CSR_MHARTID
-    bnez s0, core1
+    bnez a0, core1
     /* TODO: [p1-task2] clear BSS for flat non-ELF images */
     // check riscv.lds for __bss_start and __BSS_END__
     la s1,__bss_start
