@@ -685,3 +685,313 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length)
 
 ## 任务 3：开启双核并行运行
 
+在`bootbloader`中，从核并不需要重复加载`kernel`镜像，从核需要做的就是设置中断函数的入口地址为`kernel`的`main`函数入口地址，然后开启软件中断，等待主核完成初始化后将其唤醒。
+
+```assembly
+secondary:
+	/* TODO [P3-task3]: 
+	 * 1. Mask all interrupts
+	 * 2. let stvec pointer to kernel_main
+	 * 3. enable software interrupt for ipi
+	 */
+	// mask all interrupts
+	csrw CSR_SIE, zero
+	// let stvec pointer to kernel_main
+	la s0, kernel
+  	csrw CSR_STVEC, s0
+	// enable software interrupts for ipi
+	li s0,SIE_SSIE
+	csrs CSR_SIE, s0
+	li s0,SR_SIE
+	csrw CSR_SSTATUS, s0
+
+wait_for_wakeup:
+	wfi
+	j wait_for_wakeup
+```
+
+在`kernel`中，从核只需要初始化自己的栈指针和线程指针，且不需要清空bss段，然后打开中断并设置第一个时钟中断，等待时钟中断到来后，进入`do_scheduler`调度空闲的进程。
+
+```assembly
+#include <asm.h>
+#include <csr.h>
+
+.section ".entry_function","ax"
+ENTRY(_start)
+    /* Mask all interrupts */
+    csrw CSR_SIE, zero
+    csrw CSR_SIP, zero
+    // If cpu is core1 then no need to clear BSS
+    csrr a0, CSR_MHARTID
+    bnez a0, core1
+    /* TODO: [p1-task2] clear BSS for flat non-ELF images */
+    // check riscv.lds for __bss_start and __BSS_END__
+    la s1,__bss_start
+    la s2,__BSS_END__
+    bge s1,s2,core0
+
+loop:
+    sw zero,(s1)
+    addi s1,s1,4
+    blt s1,s2,loop
+
+core0:
+    /* TODO: [p1-task2] setup C environment */
+    lw sp,pid0_stack
+    la tp,pid0_pcb
+    call main
+
+core1:
+    lw sp,pid1_stack
+    la tp,pid1_pcb
+    call main
+
+END(_start)
+```
+
+```c
+    if (cpu_id == 1) 
+    {
+        setup_exception();
+        set_timer(get_ticks() + TIMER_INTERVAL);
+        while (1)
+        {
+            enable_preempt();
+            asm volatile("wfi");
+        }
+    }
+```
+
+而主核需要完成所有的初始化工作，在完成后，通过核间中断唤醒从核。
+
+```c
+void wakeup_other_hart()
+{
+    /* TODO: P3-TASK3 multicore*/
+    // // Wake up the other cores
+    disable_interrupt();
+    send_ipi(NULL);
+    asm volatile("csrw 0x144,zero");  // clear CSR_SIP to avoid ipi interrupt
+    enable_interrupt();
+}
+```
+
+为了保证内核中要将共享的变量或一些不能打断的过程不被两个核心打断，可直接采取内核锁的方式，即在进入内核前申请内核锁，在退出内核后释放内核锁。
+
+内核锁的实现采取了自旋锁的方式，并使用原子指令保证了对临界区操作的原子性
+
+```c
+void spin_lock_init(spin_lock_t *lock)
+{
+    /* TODO: [p2-task2] initialize spin lock */
+    lock->status = UNLOCKED;
+    return;
+}
+
+int spin_lock_try_acquire(spin_lock_t *lock)
+{
+    /* TODO: [p2-task2] try to acquire spin lock */
+    return atomic_swap_d(LOCKED, &lock->status);
+}
+
+void spin_lock_acquire(spin_lock_t *lock)
+{
+    /* TODO: [p2-task2] acquire spin lock */
+    while (spin_lock_try_acquire(lock) == LOCKED);
+    return;
+}
+
+void spin_lock_release(spin_lock_t *lock)
+{
+    /* TODO: [p2-task2] release spin lock */
+    lock->status = UNLOCKED;
+    return;
+}
+```
+
+在进入内核前申请内核锁。
+
+```assembly
+ENTRY(exception_handler_entry)
+
+  /* TODO: [p2-task3] save context via the provided macro */
+  SAVE_CONTEXT
+  /* TODO: [p2-task3] load ret_from_exception into $ra so that we can return to
+   * ret_from_exception when interrupt_help complete.
+   */
+  
+  /* TODO: [p2-task3] call interrupt_helper
+   * NOTE: don't forget to pass parameters for it.
+   */
+  call lock_kernel
+  ld a0,PCB_KERNEL_SP(tp)
+  addi a0,a0,SWITCH_TO_SIZE
+  csrr a1,CSR_STVAL
+  csrr a2,CSR_SCAUSE
+  call interrupt_helper
+  j ret_from_exception
+
+ENDPROC(exception_handler_entry)
+```
+
+在退出内核后释放内核锁。
+
+```assembly
+ENTRY(ret_from_exception)
+  /* TODO: [p2-task3] restore context via provided macro and return to sepc */
+  /* HINT: remember to check your sp, does it point to the right address? */
+  call unlock_kernel
+  RESTORE_CONTEXT
+  sret
+ENDPROC(ret_from_exception)
+```
+
+当然在进程调度的时候，我们需要两个`current_running`，标记两个核心正在运行的进程，具体对于`do_scheduler`的修改参考下个任务。
+
+## 任务 4：shell 命令 taskset————将进程绑定在指定的核上
+
+在`pcb`中增加`mask_status_t`字段，用于标记进程的绑定状态。
+
+```c
+typedef enum {
+    CORE_0,
+    CORE_1,
+    CORE_BOTH,
+} mask_status_t;
+```
+
+### 系统调用`sys_taskset`的实现
+
+终端命令`taskset [mask] [task_name]`，根据`mask`的值，启动进程`task_name`，并将其绑定在指定的核上。我们先调用`do_exec`启动进程，并将其`pcb`的`mask`字段修改为指定的`mask`值。
+
+```c
+pid_t do_taskset(char* name , int argc, char *argv[] , int mask)
+{
+    int pid = do_exec(name,argc,argv);
+    if (pid==0) return 0;
+    // Find the corresponding pcb
+    int current_pcb=0;
+    for (int i=0;i<TASK_MAXNUM;i++)
+        if (pcb[i].pid==pid && pcb[i].is_used==1)
+        {
+            current_pcb=i;
+            break;
+        }
+    // change the mask
+    switch (mask)
+    {
+        case 1:
+            pcb[current_pcb].mask=CORE_0;
+            break;
+        case 2:
+            pcb[current_pcb].mask=CORE_1;
+            break;
+        case 3:
+            pcb[current_pcb].mask=CORE_BOTH;
+            break;
+        default:
+            break;
+    }
+    return pid;
+}
+```
+
+### 系统调用`sys_taskset_p`的实现
+
+终端命令`taskset -p [mask] [pid]`，根据`mask`的值，将进程`pid`绑定在指定的核上。我们只需要修改`pcb`的`mask`字段即可。
+
+```c
+pid_t do_taskset_p(pid_t pid , int mask)
+{
+    // Find the corresponding pcb
+    int current_pcb=0;
+    for (int i=0;i<TASK_MAXNUM;i++)
+        if (pcb[i].pid==pid && pcb[i].is_used==1)
+        {
+            current_pcb=i;
+            break;
+        }
+    // Note that we can't change kernel, shell or process that not exist
+    if (current_pcb==0) return 0;
+    // change the mask
+    switch (mask)
+    {
+        case 1:
+            pcb[current_pcb].mask=CORE_0;
+            break;
+        case 2:
+            pcb[current_pcb].mask=CORE_1;
+            break;
+        case 3:
+            pcb[current_pcb].mask=CORE_BOTH;
+            break;
+        default:
+            break;
+    }
+    return pid;
+}
+```
+
+### 调度器的实现
+
+在`do_scheduler`中，我们需要根据`cpu_id`检索符合条件的进程，然后进行调度。
+
+```c
+void do_scheduler(void)
+{
+    int cpu_id = get_current_cpu_id();
+    // TODO: [p2-task3] Check sleep queue to wake up PCBs
+    check_sleeping();
+    // TODO: [p2-task1] Modify the current_running[cpu_id] pointer.
+    // Find the next task to run for this core.
+    int flag=0;
+    mask_status_t mask = (cpu_id == 0) ? CORE_0 : CORE_1;
+    list_node_t *next_running;
+    list_head *temp_queue=&ready_queue;
+    while (temp_queue->prev!=&ready_queue)
+    {
+        pcb_t *pcb=list_to_pcb(temp_queue->prev);
+        if (pcb->mask == mask || pcb->mask == CORE_BOTH)
+        {
+            flag=1;
+            next_running = temp_queue->prev;
+            break;
+        }
+        temp_queue = temp_queue->prev;
+    }
+    // If there is no task to run
+    if (flag == 0)
+    {
+        // If the prev_running is still running or it's kernel, just return
+        if (current_running[cpu_id]->status == TASK_RUNNING || current_running[cpu_id]->pid == 0)
+            return;
+        else  /* switch to kernel and wait for interrupt */
+        {
+            pcb_t *prev_running=current_running[cpu_id];
+            current_running[cpu_id] = (cpu_id == 0) ? &pid0_pcb : &pid1_pcb;
+            switch_to(prev_running,current_running[cpu_id]);
+            return;
+        }
+    }
+    // If current_running[cpu_id] is running and it's not kernel
+    // re-add it to the ready_queue
+    // else which means it's already in ready_queue or sleep_queue or other block_queue
+    pcb_t *prev_running=current_running[cpu_id];
+    if (prev_running->pid!=0 && prev_running->status==TASK_RUNNING)  //make sure the kernel stays outside the ready_queue
+    {
+        prev_running->status=TASK_READY;
+        list_add(&ready_queue,&prev_running->list); //add the prev_running to the end of the queue
+    }
+    // Find the next task to run
+    // Make sure set current_running[cpu_id]'s status to TASK_RUNNING
+    // AFTER check if prev_running's status is TASK_RUNNING
+    // because prev_running might be the same as current_running[cpu_id] and
+    // it might be re-add to ready_queue by other syscalls
+    list_node_t *current_list=next_running;        
+    list_del(current_list);
+    current_running[cpu_id]=list_to_pcb(current_list);
+    current_running[cpu_id]->status = TASK_RUNNING;
+    // TODO: [p2-task1] switch_to current_running[cpu_id]
+    switch_to(prev_running,current_running[cpu_id]);
+}
+```
