@@ -249,6 +249,7 @@ void do_mbox_close(int mbox_idx)
 }
 int do_mbox_send(int mbox_idx, void * msg, int msg_length)
 {
+    if (mailboxes[mbox_idx].is_use == 0) return 0;
     int cpu_id;
     int block_num=0;
     // If the mailbox has no available space, block the send process.
@@ -258,6 +259,7 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length)
         cpu_id = get_current_cpu_id();
         block_num++;
         do_block(&current_running[cpu_id]->list,&mailboxes[mbox_idx].send_queue);
+        if (mailboxes[mbox_idx].is_use == 0) return 0;
     }
     // Copy the message to the mailbox
     memcpy(mailboxes[mbox_idx].buffer+mailboxes[mbox_idx].length,msg,msg_length);
@@ -270,6 +272,7 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length)
 }
 int do_mbox_recv(int mbox_idx, void * msg, int msg_length)
 {
+    if (mailboxes[mbox_idx].is_use == 0) return 0;
     int cpu_id = get_current_cpu_id();
     int block_num=0;
     // If the mailbox has no available message , block the receive process.
@@ -279,6 +282,7 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length)
         cpu_id = get_current_cpu_id();
         block_num++;
         do_block(&current_running[cpu_id]->list,&mailboxes[mbox_idx].recv_queue);
+        if (mailboxes[mbox_idx].is_use == 0) return 0;
     }
     // Copy the message from the mailbox
     mailboxes[mbox_idx].length-=msg_length;
