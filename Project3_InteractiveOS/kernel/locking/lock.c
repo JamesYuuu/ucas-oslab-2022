@@ -72,8 +72,11 @@ void do_mutex_lock_acquire(int mlock_idx)
     int cpu_id = get_current_cpu_id();
     /* TODO: [p2-task2] acquire mutex lock */
     // Continuously block the process if the lock is acquired
-    while (mlocks[mlock_idx].lock.status==LOCKED) 
+    while (mlocks[mlock_idx].lock.status==LOCKED)
+    {
+        cpu_id = get_current_cpu_id();
         do_block(&current_running[cpu_id]->list,&mlocks[mlock_idx].block_queue);
+    }
     // Acquire the lock
     mlocks[mlock_idx].lock.status=LOCKED;
     mlocks[mlock_idx].pid=current_running[cpu_id]->pid;
@@ -246,12 +249,13 @@ void do_mbox_close(int mbox_idx)
 }
 int do_mbox_send(int mbox_idx, void * msg, int msg_length)
 {
-    int cpu_id = get_current_cpu_id();
+    int cpu_id;
     int block_num=0;
     // If the mailbox has no available space, block the send process.
     // Note that when the process leaves the while the space should be enough.
     while (msg_length>mailboxes[mbox_idx].max_length-mailboxes[mbox_idx].length)
     {
+        cpu_id = get_current_cpu_id();
         block_num++;
         do_block(&current_running[cpu_id]->list,&mailboxes[mbox_idx].send_queue);
     }
@@ -272,6 +276,7 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length)
     // Note that when the process leaves the while there should be available message.
     while (msg_length>mailboxes[mbox_idx].length)
     {
+        cpu_id = get_current_cpu_id();
         block_num++;
         do_block(&current_running[cpu_id]->list,&mailboxes[mbox_idx].recv_queue);
     }
