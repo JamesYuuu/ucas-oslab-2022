@@ -57,22 +57,8 @@ void do_scheduler(void)
     int cpu_id = get_current_cpu_id();
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
     check_sleeping();
-    // TODO: [p2-task1] Modify the current_running pointer.
-
-    // If current_running[cpu_id] is running and it's not kernel
-    // re-add it to the ready_queue
-    // else which means it's already in ready_queue or sleep_queue or other block_queue
-    pcb_t *prev_running=current_running[cpu_id];
-    if (prev_running->pid!=0 && prev_running->status==TASK_RUNNING)  //make sure the kernel stays outside the ready_queue
-    {
-        prev_running->status=TASK_READY;
-        list_add(&ready_queue,&prev_running->list);                  //add the prev_running to the end of the queue
-    }
-    // Find the next task to run
-    // Make sure set current_running[cpu_id]'s status to TASK_RUNNING
-    // AFTER check if prev_running's status is TASK_RUNNING
-    // because prev_running might be the same as current_running[cpu_id] and
-    // it might be re-add to ready_queue by other syscalls
+    // TODO: [p2-task1] Modify the current_running[cpu_id] pointer.
+    // Find the next task to run for this core.
     int flag=0;
     mask_status_t mask = (cpu_id == 0) ? CORE_0 : CORE_1;
     list_node_t *next_running;
@@ -88,22 +74,42 @@ void do_scheduler(void)
         }
         temp_queue = temp_queue->prev;
     }
-    // If there is available task to run, then run it
-    // else switch to kernel and wait for interrupt
-    if (flag == 1)
+    // If there is no task to run
+    if (flag == 0)
     {
-        list_del(next_running);
-        current_running[cpu_id]=list_to_pcb(next_running);
-        current_running[cpu_id]->status = TASK_RUNNING;
+        // If the prev_running is still running or it's kernel, just return
+        if (current_running[cpu_id]->status == TASK_RUNNING || current_running[cpu_id]->pid == 0)
+            return;
+        else  /* switch to kernel and wait for interrupt */
+        {
+            pcb_t *prev_running=current_running[cpu_id];
+            current_running[cpu_id] = (cpu_id == 0) ? &pid0_pcb : &pid1_pcb;
+            switch_to(prev_running,current_running[cpu_id]);
+            return;
+        }
     }
-    else 
-        current_running[cpu_id] == (cpu_id == 0) ? &pid0_pcb : &pid1_pcb;
+    // If current_running[cpu_id] is running and it's not kernel
+    // re-add it to the ready_queue
+    // else which means it's already in ready_queue or sleep_queue or other block_queue
+    pcb_t *prev_running=current_running[cpu_id];
+    if (prev_running->pid!=0 && prev_running->status==TASK_RUNNING)  //make sure the kernel stays outside the ready_queue
+    {
+        prev_running->status=TASK_READY;
+        list_add(&ready_queue,&prev_running->list); //add the prev_running to the end of the queue
+    }
+    // Find the next task to run
+    // Make sure set current_running[cpu_id]'s status to TASK_RUNNING
+    // AFTER check if prev_running's status is TASK_RUNNING
+    // because prev_running might be the same as current_running[cpu_id] and
+    // it might be re-add to ready_queue by other syscalls
+    list_node_t *current_list=next_running;        
+    list_del(current_list);
+    current_running[cpu_id]=list_to_pcb(current_list);
+    current_running[cpu_id]->status = TASK_RUNNING;
     // TODO: [p2-task1] switch_to current_running[cpu_id]
-    // If prev_running is the same as next task than no need to perform switch_to
-    if (prev_running != current_running[cpu_id])
-        switch_to(prev_running,current_running[cpu_id]);
-    return;
+    switch_to(prev_running,current_running[cpu_id]);
 }
+
 
 void do_sleep(uint32_t sleep_time)
 {
