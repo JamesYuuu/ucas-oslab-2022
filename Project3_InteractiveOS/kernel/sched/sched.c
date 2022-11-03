@@ -11,20 +11,27 @@
 #include <os/string.h>
 #include <os/task.h>
 #include <os/smp.h>
+#include <os/irq.h>
 
 pcb_t pcb[NUM_MAX_TASK];
-const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
-const ptr_t pid1_stack = INIT_KERNEL_STACK + PAGE_SIZE * 2;
+const ptr_t pid0_stack_ori = INIT_KERNEL_STACK + PAGE_SIZE;
+const ptr_t pid1_stack_ori = INIT_KERNEL_STACK + PAGE_SIZE * 2;
+const ptr_t pid0_stack = pid0_stack_ori - sizeof(switchto_context_t) - sizeof(regs_context_t);
+const ptr_t pid1_stack = pid1_stack_ori - sizeof(switchto_context_t) - sizeof(regs_context_t);
 pcb_t pid0_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t)pid0_stack,
-    .user_sp = (ptr_t)pid0_stack
+    .user_sp = (ptr_t)pid0_stack_ori,
+    .kernel_stack_base = (ptr_t)pid0_stack_ori,
+    .user_stack_base = (ptr_t)pid0_stack_ori,
 };
 
 pcb_t pid1_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t)pid1_stack,
-    .user_sp = (ptr_t)pid1_stack
+    .user_sp = (ptr_t)pid1_stack_ori,
+    .kernel_stack_base = (ptr_t)pid1_stack_ori,
+    .user_stack_base = (ptr_t)pid1_stack_ori,
 };
 
 LIST_HEAD(ready_queue);
@@ -53,21 +60,7 @@ void do_scheduler(void)
     // TODO: [p2-task1] Modify the current_running[cpu_id] pointer.
     // If there is no task in ready_queue but current_running[cpu_id] is running 
     // then their is no need to switch
-    if (list_empty(&ready_queue))
-    {
-        if (current_running[cpu_id]->status==TASK_RUNNING)
-            return;
-        if (list_empty(&sleep_queue))
-        {
-            unlock_kernel();
-            while (list_empty(&ready_queue));
-            lock_kernel();
-        }
-    }
-    // If there is no task in the ready queue, wait for sleep processes
-    // then what to do if their is no sleeping processes and the shell is blocked?
-    while (list_empty(&ready_queue))
-        check_sleeping();     
+    if (list_empty(&ready_queue)) return;
     // If current_running[cpu_id] is running and it's not kernel
     // re-add it to the ready_queue
     // else which means it's already in ready_queue or sleep_queue or other block_queue

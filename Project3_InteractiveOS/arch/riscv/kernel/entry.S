@@ -187,7 +187,6 @@ ENTRY(exception_handler_entry)
 
   /* TODO: [p2-task3] save context via the provided macro */
   // FIXME:if tp=0 which means it's kernel , then no need to save_context?
-  beqz tp,end
   SAVE_CONTEXT
   /* TODO: [p2-task3] load ret_from_exception into $ra so that we can return to
    * ret_from_exception when interrupt_help complete.
@@ -196,7 +195,6 @@ ENTRY(exception_handler_entry)
   /* TODO: [p2-task3] call interrupt_helper
    * NOTE: don't forget to pass parameters for it.
    */
-end:
   call lock_kernel
   ld a0,PCB_KERNEL_SP(tp)
   addi a0,a0,SWITCH_TO_SIZE

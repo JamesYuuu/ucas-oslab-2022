@@ -6,10 +6,6 @@
 #include <asm.h>
 #include <csr.h>
 
-#define KERNEL_STACK		0x50500000
-
-#define KERNEL_STACK_1        0x50502000
-
 .section ".entry_function","ax"
 ENTRY(_start)
     /* Mask all interrupts */
@@ -21,22 +17,22 @@ ENTRY(_start)
     // check riscv.lds for __bss_start and __BSS_END__
     la s1,__bss_start
     la s2,__BSS_END__
-    bge s1,s2,end
+    bge s1,s2,core0
 
 loop:
     sw zero,(s1)
     addi s1,s1,4
     blt s1,s2,loop
 
-end:
+core0:
     /* TODO: [p1-task2] setup C environment */
-    li sp,KERNEL_STACK
-    mv tp,zero
+    lw sp,pid0_stack
+    la tp,pid0_pcb
     call main
 
 core1:
-    li sp,KERNEL_STACK_1
-    mv tp,zero
+    lw sp,pid1_stack
+    la tp,pid1_pcb
     call main
 
 END(_start)
