@@ -16,6 +16,6 @@ typedef struct {
     uint32_t end_addr;
 } task_info_t;
 
-extern task_info_t tasks[TASK_MAXNUM];
+task_info_t tasks[TASK_MAXNUM];
 
 #endif

@@ -48,9 +48,6 @@ extern void ret_from_exception();
 
 // Task info array
 #define TASK_ADDRESS 0x58000000
-task_info_t tasks[TASK_MAXNUM];
-
-spin_lock_t kernel_lock;
 
 static void init_jmptab(void)
 {

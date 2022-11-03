@@ -12,6 +12,7 @@ ENTRY(_start)
     csrw CSR_SIE, zero
     csrw CSR_SIP, zero
     // If cpu is core1 then no need to clear BSS
+    csrr a0, CSR_MHARTID
     bnez a0, core1
     /* TODO: [p1-task2] clear BSS for flat non-ELF images */
     // check riscv.lds for __bss_start and __BSS_END__

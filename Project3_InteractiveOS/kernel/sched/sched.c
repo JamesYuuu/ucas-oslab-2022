@@ -59,8 +59,20 @@ void do_scheduler(void)
     check_sleeping();
     // TODO: [p2-task1] Modify the current_running[cpu_id] pointer.
     // If there is no task in ready_queue but current_running[cpu_id] is running 
-    // then their is no need to switch
-    if (list_empty(&ready_queue)) return;
+    // then their is no need to switch else switch to kernel
+    if (list_empty(&ready_queue))
+    {
+        if (current_running[cpu_id]->status == TASK_RUNNING || current_running[cpu_id]->pid == 0)
+            return;
+        else 
+        {
+            pcb_t *prev_running=current_running[cpu_id];
+            current_running[cpu_id] = (cpu_id == 0) ? &pid0_pcb : &pid1_pcb;
+            switch_to(prev_running,current_running[cpu_id]);
+            return;
+        }
+    }
+
     // If current_running[cpu_id] is running and it's not kernel
     // re-add it to the ready_queue
     // else which means it's already in ready_queue or sleep_queue or other block_queue
