@@ -164,6 +164,35 @@ void execute_command()
             else printf("Error: Kill process %d failed\n",pid);
         return;
     }
+    // command taskset
+    if (strcmp(argv[0],"taskset")==0)
+    {
+        if (strcmp(argv[1],"-p")==0)
+        {
+            int mask;
+            if (strcmp(argv[2],"0x1")==0) mask=1;
+                else if (strcmp(argv[2],"0x2")==0) mask=2;
+                    else mask=3;
+            int pid=atoi(argv[3]);
+            if (sys_taskset_p(pid,mask)!=0) printf("Info: Set process %d's mask to %s successfully\n",pid,argv[2]);
+                else printf("Error: Set process %d's mask to %s failed\n",pid,argv[2]);
+        }
+        else
+        {
+            int mask;
+            if (strcmp(argv[1],"0x1")==0) mask=1;
+                else if (strcmp(argv[1],"0x2")==0) mask=2;
+                    else mask=3;
+            char *name = argv[2];
+            char *p[argc-2];
+            for (int i=2;i<argc;i++)
+                p[i-2]=argv[i];
+            int pid = sys_taskset(name,argc-2,p,mask);
+            if (pid!=0) printf("Info: Execute %s and set it's mask to %s successfully, pid=%d\n",name,argv[1],pid);
+                else printf("Error: Execute %s and set it's mask to %s failed\n",name,argv[1]);
+        }
+        return;
+    }
 
     // unknown command
     printf("Error: Unknown command: %s\n",argv[0]);

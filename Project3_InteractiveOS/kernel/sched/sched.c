@@ -194,6 +194,10 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pcb[freepcb].kernel_sp = (ptr_t)pt_switchto;
     pcb[freepcb].is_used = 1;
 
+    // inherit mask from shell or it's parent
+    int cpu_id = get_current_cpu_id();
+    pcb[freepcb].mask = current_running[cpu_id]->mask;
+
     return process_id;
 }
 
@@ -319,4 +323,64 @@ pid_t do_getpid()
 {
     int cpu_id = get_current_cpu_id();
     return current_running[cpu_id]->pid;
+}
+
+pid_t do_taskset_p(pid_t pid , int mask)
+{
+    // Find the corresponding pcb
+    int current_pcb=0;
+    for (int i=0;i<TASK_MAXNUM;i++)
+        if (pcb[i].pid==pid && pcb[i].is_used==1)
+        {
+            current_pcb=i;
+            break;
+        }
+    // Note that we can't change kernel, shell or process that not exist
+    if (current_pcb==0) return 0;
+    // change the mask
+    switch (mask)
+    {
+        case 1:
+            pcb[current_pcb].mask=CORE_0;
+            break;
+        case 2:
+            pcb[current_pcb].mask=CORE_1;
+            break;
+        case 3:
+            pcb[current_pcb].mask=CORE_BOTH;
+            break;
+        default:
+            break;
+    }
+    return pid;
+}
+
+pid_t do_taskset(char* name , int argc, char *argv[] , int mask)
+{
+    int pid = do_exec(name,argc,argv);
+    if (pid==0) return 0;
+    // Find the corresponding pcb
+    int current_pcb=0;
+    for (int i=0;i<TASK_MAXNUM;i++)
+        if (pcb[i].pid==pid && pcb[i].is_used==1)
+        {
+            current_pcb=i;
+            break;
+        }
+    // change the mask
+    switch (mask)
+    {
+        case 1:
+            pcb[current_pcb].mask=CORE_0;
+            break;
+        case 2:
+            pcb[current_pcb].mask=CORE_1;
+            break;
+        case 3:
+            pcb[current_pcb].mask=CORE_BOTH;
+            break;
+        default:
+            break;
+    }
+    return pid;
 }

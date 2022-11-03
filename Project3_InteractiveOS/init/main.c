@@ -159,6 +159,10 @@ static void init_syscall(void)
     syscall[SYSCALL_GETPID] = (long (*)())do_getpid;
     syscall[SYSCALL_YIELD] = (long (*)())do_scheduler;
 
+    // syscalls for taskset
+    syscall[SYSCALL_TASKSET] = (long (*)())do_taskset;
+    syscall[SYSCALL_TASKSET_P] = (long (*)())do_taskset_p;
+
     // syscalls for input and output
     syscall[SYSCALL_WRITE] = (long (*)())screen_write;
     syscall[SYSCALL_READCH] = (long (*)())bios_getchar;

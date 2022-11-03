@@ -148,4 +148,7 @@ extern int do_waitpid(pid_t pid);
 extern void do_process_show();
 extern pid_t do_getpid();
 
+extern pid_t do_taskset(char* name , int argc, char *argv[] , int mask);
+extern pid_t do_taskset_p(pid_t pid , int mask);
+
 #endif

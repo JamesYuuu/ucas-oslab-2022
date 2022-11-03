@@ -36,4 +36,8 @@
 // add create_thread
 #define SYSCALL_CREATE_THREAD 60
 
+// add task_set
+#define SYSCALL_TASKSET 8
+#define SYSCALL_TASKSET_P 9
+
 #endif
