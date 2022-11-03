@@ -64,7 +64,7 @@ void do_scheduler(void)
     {
         if (current_running[cpu_id]->status == TASK_RUNNING || current_running[cpu_id]->pid == 0)
             return;
-        else 
+        else  /* switch to kernel and wait for interrupt */
         {
             pcb_t *prev_running=current_running[cpu_id];
             current_running[cpu_id] = (cpu_id == 0) ? &pid0_pcb : &pid1_pcb;
@@ -72,7 +72,6 @@ void do_scheduler(void)
             return;
         }
     }
-
     // If current_running[cpu_id] is running and it's not kernel
     // re-add it to the ready_queue
     // else which means it's already in ready_queue or sleep_queue or other block_queue
@@ -277,21 +276,42 @@ void do_process_show()
     for (int i=0;i<NUM_MAX_TASK;i++)
     {
         if (pcb[i].is_used==0) continue;
-        printk("[%d] PID : %d , STATUS : ",i,pcb[i].pid);
+        printk("[%d] PID : %d  ",i,pcb[i].pid);
         switch (pcb[i].status)
         {
             case TASK_RUNNING:
-                printk("RUNNING\n");
+                printk("STATUS : RUNNING  ");
                 break;
             case TASK_READY:
-                printk("READY\n");
+                printk("STATUS : READY    ");
                 break;
             case TASK_BLOCKED:
-                printk("BLOCKED\n");
+                printk("STATUS : BLOCKED  ");
                 break;
             default:
                 break;
         }
+        switch (pcb[i].mask)
+        {
+            case CORE_0:
+                printk("MASK : 0x1  ");
+                break;
+            case CORE_1:
+                printk("MASK : 0x2  ");
+                break;
+            case CORE_BOTH:
+                printk("MASK : 0x3  ");
+                break;
+            default:
+                break;
+        }
+        if (pcb[i].status == TASK_RUNNING)
+        {
+            if (pcb[i].pid == current_running[0]->pid)
+                printk("RUNNING ON CORE 0");
+            else printk("RUNNING ON CORE 1");
+        }
+        printk("\n");
     }
 }
 

@@ -63,6 +63,12 @@ typedef enum {
     TASK_EXITED,
 } task_status_t;
 
+typedef enum {
+    CORE_0,
+    CORE_1,
+    CORE_BOTH,
+} mask_status_t;
+
 /* Process Control Block */
 typedef struct pcb
 {
@@ -90,9 +96,13 @@ typedef struct pcb
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
 
+    // If this PCB is used
     int is_used;
-    // [p2-task5] add thread list
 
+    // Which core it pinned to
+    mask_status_t mask;
+    
+    // [p2-task5] add thread list
     int thread_num;
     union{
         struct pcb *father;

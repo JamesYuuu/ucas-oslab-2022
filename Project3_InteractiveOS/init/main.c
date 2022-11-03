@@ -138,6 +138,7 @@ static void init_pcb(void)
     pcb[0].cursor_x = pcb[0].cursor_y = 0;
     pcb[0].thread_num = -1;
     pcb[0].is_used = 1;
+    pcb[0].mask = CORE_BOTH;
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, tasks[0].entry_point, &pcb[0]);
     list_add(&ready_queue, &(pcb[0].list));
     /* TODO: [p2-task1] remember to initialize 'current_running' */
@@ -200,6 +201,8 @@ int main(void)
 {
     int cpu_id = get_current_cpu_id();
 
+    // note that core 1 only need to setup exception and the first time interrupt
+    // other initialization should be done by core 0
     if (cpu_id == 1) 
     {
         setup_exception();
