@@ -223,10 +223,10 @@ int main(void)
     init_jmptab();
 
     // Init task information (〃'▽'〃)
-    // init_task_info();
+    init_task_info();
 
     // Init Process Control Blocks |•'-'•) ✧
-    // init_pcb();
+    init_pcb();
     printk("> [INIT] PCB initialization succeeded.\n");
 
     // Read CPU frequency (｡•ᴗ-)_
