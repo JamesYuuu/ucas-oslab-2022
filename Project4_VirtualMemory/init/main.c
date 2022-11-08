@@ -47,7 +47,7 @@
 extern void ret_from_exception();
 
 // Task info array
-#define TASK_ADDRESS 0x58000000
+#define TASK_ADDRESS pa2kva(0x58000000)
 
 static void init_jmptab(void)
 {
@@ -223,10 +223,10 @@ int main(void)
     init_jmptab();
 
     // Init task information (〃'▽'〃)
-    init_task_info();
+    // init_task_info();
 
     // Init Process Control Blocks |•'-'•) ✧
-    init_pcb();
+    // init_pcb();
     printk("> [INIT] PCB initialization succeeded.\n");
 
     // Read CPU frequency (｡•ᴗ-)_

@@ -77,8 +77,7 @@ static inline void set_satp(
 #define _PAGE_PFN_SHIFT 10lu
 
 #define VA_MASK ((1lu << 39) - 1)
-#define PFN_MASK ((1lu << 44) - 1)
-#define ATTRIBUTE_MASK ((1lu << 10) - 1)
+#define PFN_MASK ((1lu << 54) - 1)
 #define VPN_MASK ((1lu << 9) - 1)
 
 #define PPN_BITS 9lu
@@ -105,12 +104,12 @@ static inline uintptr_t pa2kva(uintptr_t pa)
 static inline long get_pfn(PTE entry)
 {
     /* TODO: [P4-task1] */
-    return (entry >> _PAGE_PFN_SHIFT) & PFN_MASK;
+    return (entry & PFN_MASK) >> _PAGE_PFN_SHIFT;
 }
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
     /* TODO: [P4-task1] */
-    *entry |= (pfn << _PAGE_PFN_SHIFT) | ATTRIBUTE_MASK;
+    *entry = (pfn << _PAGE_PFN_SHIFT) & PFN_MASK;
 }
 
 /* get physical page addr from PTE 'entry' */
