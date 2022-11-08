@@ -85,7 +85,7 @@ static void init_task_info(void)
     {
         tasks[i] = *((task_info_t *)(unsigned long)(TASK_ADDRESS + offset));
         offset += sizeof(task_info_t);
-        load_task_img(tasks[i].task_name);
+        //load_task_img(tasks[i].task_name);
     }
 }
 
@@ -222,8 +222,6 @@ int main(void)
 {
     int cpu_id = get_current_cpu_id();
 
-    cancel_mapping();
-
     // note that core 1 only need to setup exception and the first time interrupt
     // other initialization should be done by core 0
     if (cpu_id == 1) 
@@ -237,11 +235,14 @@ int main(void)
         }
     }
 
+    // Cancel previous mapping for boot.c
+    cancel_mapping();
+
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
 
     // Init task information (〃'▽'〃)
-    //init_task_info();
+    init_task_info();
 
     // Init Process Control Blocks |•'-'•) ✧
     init_pcb();

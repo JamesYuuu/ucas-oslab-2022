@@ -13,7 +13,8 @@ typedef struct {
     char task_name[NAME_MAXNUM];
     uint64_t entry_point;
     uint32_t start_addr;
-    uint32_t end_addr;
+    uint32_t filesz;
+    uint32_t memsz;
 } task_info_t;
 
 task_info_t tasks[TASK_MAXNUM];

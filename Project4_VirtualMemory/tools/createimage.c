@@ -25,7 +25,8 @@ typedef struct {
     char task_name[NAME_MAXNUM];
     uint64_t entry_point;
     uint32_t start_addr;
-    uint32_t end_addr;
+    uint32_t filesz;
+    uint32_t memsz;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -127,6 +128,13 @@ static void create_image(int nfiles, char *files[])
             if (strcmp(*files, "main") == 0) {
                 nbytes_kernel += get_filesz(phdr);
             }
+
+            else if (phdr.p_type == PT_LOAD) {
+                if (taskidx >= 0) {
+                    taskinfo[taskidx].filesz = get_filesz(phdr);
+                    taskinfo[taskidx].memsz = get_memsz(phdr);
+                }
+            }
         }
 
         /* write padding bytes */
@@ -145,9 +153,8 @@ static void create_image(int nfiles, char *files[])
         else if (strcmp(*files,"main")!=0)
         {
             strcpy(taskinfo[taskidx].task_name, *files);
-            taskinfo[taskidx].entry_point = ehdr.e_entry;
-            taskinfo[taskidx].start_addr=pre_addr;
-            taskinfo[taskidx].end_addr=phyaddr;
+            taskinfo[taskidx].entry_point = get_entrypoint(ehdr);
+            taskinfo[taskidx].start_addr  = pre_addr;
         }
         fclose(fp);
         files++;

@@ -19,9 +19,9 @@ uint64_t load_task_img(char *taskname)
         if (strcmp(taskname,tasks[i].task_name)==0)
         {   
             int offset=tasks[i].start_addr%512;
-            int block_num=(tasks[i].end_addr-1)/512+1-tasks[i].start_addr/512;
+            int block_num=(tasks[i].filesz-1)/512+1;
             int block_id=tasks[i].start_addr/512;
-            int task_size=tasks[i].end_addr-tasks[i].start_addr;
+            int task_size=tasks[i].filesz;
             bios_sdread(tasks[i].entry_point,block_num,block_id);
            
             // The code below copy the app to the original place if needed
