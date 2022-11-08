@@ -129,8 +129,8 @@ static void init_pcb(void)
     // Note that tasks[0] is shell and we only need to load shell
     for (int i=0;i<TASK_MAXNUM;i++)
     {
-        pcb[i].kernel_stack_base = allocKernelPage(1);
-        pcb[i].user_stack_base = allocUserPage(1);
+        pcb[i].kernel_stack_base = allocPage(1);
+        pcb[i].user_stack_base = allocPage(1);
     }
     pcb[0].pid = 1;
     pcb[0].kernel_sp = pcb[0].kernel_stack_base;

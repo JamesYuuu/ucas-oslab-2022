@@ -2,6 +2,7 @@
 #define PGTABLE_H
 
 #include <type.h>
+#include <os/string.h>
 
 #define SATP_MODE_SV39 8
 #define SATP_MODE_SV48 9
@@ -20,18 +21,25 @@
  */
 static inline void local_flush_tlb_all(void)
 {
-    __asm__ __volatile__ ("sfence.vma" : : : "memory");
+    __asm__ __volatile__("sfence.vma"
+                         :
+                         :
+                         : "memory");
 }
 
 /* Flush one page from local TLB */
 static inline void local_flush_tlb_page(unsigned long addr)
 {
-    __asm__ __volatile__ ("sfence.vma %0" : : "r" (addr) : "memory");
+    __asm__ __volatile__("sfence.vma %0"
+                         :
+                         : "r"(addr)
+                         : "memory");
 }
 
 static inline void local_flush_icache_all(void)
 {
-    asm volatile ("fence.i" ::: "memory");
+    asm volatile("fence.i" ::
+                     : "memory");
 }
 
 static inline void set_satp(
@@ -39,10 +47,13 @@ static inline void set_satp(
 {
     unsigned long __v =
         (unsigned long)(((unsigned long)mode << SATP_MODE_SHIFT) | ((unsigned long)asid << SATP_ASID_SHIFT) | ppn);
-    __asm__ __volatile__("sfence.vma\ncsrw satp, %0" : : "rK"(__v) : "memory");
+    __asm__ __volatile__("sfence.vma\ncsrw satp, %0"
+                         :
+                         : "rK"(__v)
+                         : "memory");
 }
 
-#define PGDIR_PA 0x51000000lu  // use 51000000 page as PGDIR
+#define PGDIR_PA 0x51000000lu // use 51000000 page as PGDIR
 
 /*
  * PTE format:
@@ -66,9 +77,14 @@ static inline void set_satp(
 #define _PAGE_PFN_SHIFT 10lu
 
 #define VA_MASK ((1lu << 39) - 1)
+#define PFN_MASK ((1lu << 44) - 1)
+#define ATTRIBUTE_MASK ((1lu << 10) - 1)
+#define VPN_MASK ((1lu << 9) - 1)
 
 #define PPN_BITS 9lu
 #define NUM_PTE_ENTRY (1 << PPN_BITS)
+
+#define KVA_BASE_ADDR (uintptr_t)0xffffffc000000000
 
 typedef uint64_t PTE;
 
@@ -76,54 +92,67 @@ typedef uint64_t PTE;
 static inline uintptr_t kva2pa(uintptr_t kva)
 {
     /* TODO: [P4-task1] */
+    return kva - KVA_BASE_ADDR;
 }
 
 static inline uintptr_t pa2kva(uintptr_t pa)
 {
     /* TODO: [P4-task1] */
-}
-
-/* get physical page addr from PTE 'entry' */
-static inline uint64_t get_pa(PTE entry)
-{
-    /* TODO: [P4-task1] */
+    return pa + KVA_BASE_ADDR;
 }
 
 /* Get/Set page frame number of the `entry` */
 static inline long get_pfn(PTE entry)
 {
     /* TODO: [P4-task1] */
+    return (entry >> _PAGE_PFN_SHIFT) & PFN_MASK;
 }
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
     /* TODO: [P4-task1] */
+    *entry |= (pfn << _PAGE_PFN_SHIFT) | ATTRIBUTE_MASK;
+}
+
+/* get physical page addr from PTE 'entry' */
+static inline uint64_t get_pa(PTE entry)
+{
+    /* TODO: [P4-task1] */
+    return get_pfn(entry) << NORMAL_PAGE_SHIFT;
 }
 
 /* Get/Set attribute(s) of the `entry` */
 static inline long get_attribute(PTE entry, uint64_t mask)
 {
     /* TODO: [P4-task1] */
+    return entry & mask;
 }
 static inline void set_attribute(PTE *entry, uint64_t bits)
 {
     /* TODO: [P4-task1] */
+    *entry |= bits;
 }
 
 static inline void clear_pgdir(uintptr_t pgdir_addr)
 {
     /* TODO: [P4-task1] */
+    memset((void *)pgdir_addr, 0, NORMAL_PAGE_SIZE);
 }
 
-/* 
- * query the page table stored in pgdir_va to obtain the physical 
+/*
+ * query the page table stored in pgdir_va to obtain the physical
  * address corresponding to the virtual address va.
- * 
- * return the kernel virtual address of the physical address 
+ *
+ * return the kernel virtual address of the physical address
  */
 static inline uintptr_t get_kva_of(uintptr_t va, uintptr_t pgdir_va)
 {
     // TODO: [P4-task1] (todo if you need)
+    uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
+    uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
+    uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
+    PTE *pme = pa2kva(get_pa(((PTE *)pgdir_va)[vpn2]));
+    PTE *pte = pa2kva(get_pa(pme[vpn1]));
+    return pa2kva(get_pa(pte[vpn0]));
 }
 
-
-#endif  // PGTABLE_H
+#endif // PGTABLE_H

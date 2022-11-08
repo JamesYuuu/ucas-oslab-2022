@@ -56,7 +56,7 @@ static void setup_vm()
         map_page(kva, kva2pa(kva), early_pgdir);
     }
     // map boot address
-    for (uint64_t pa = 0x50000000lu; pa < 0x50400000lu;
+    for (uint64_t pa = 0x50000000lu; pa < 0x51000000lu;
          pa += 0x200000lu) {
         map_page(pa, pa, early_pgdir);
     }

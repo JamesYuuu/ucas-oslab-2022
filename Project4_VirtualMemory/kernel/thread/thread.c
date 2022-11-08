@@ -19,8 +19,8 @@ void create_thread(long entry, long arg)
     int cpu_id = get_current_cpu_id();
     ptr_t kernel_stack,user_stack;
 
-    kernel_stack = allocKernelPage(1);
-    user_stack = allocUserPage(1);
+    kernel_stack = allocPage(1);
+    user_stack = allocPage(1);
 
     // init regs_context_t by copying from father pcb;
     regs_context_t *pcb_regs =
