@@ -47,7 +47,7 @@
 extern void ret_from_exception();
 
 // Task info array
-#define TASK_ADDRESS pa2kva(0x58000000)
+#define TASK_ADDRESS 0xffffffc058000000
 
 static void init_jmptab(void)
 {
@@ -74,13 +74,13 @@ static void init_task_info(void)
     short task_num;
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
-    bios_sdread(TASK_ADDRESS, 1, 0);
+    bios_sdread(kva2pa(TASK_ADDRESS), 1, 0);
     task_num = *((short *)(TASK_ADDRESS + 512 - 10));
     int info_address = *((int *)(TASK_ADDRESS + 512 - 8));
     int block_id = info_address / 512;
     int offset = info_address % 512;
     int block_num = (info_address + sizeof(task_info_t) * task_num - 1) / 512 + 1 - block_id;
-    bios_sdread(TASK_ADDRESS, block_num, block_id);
+    bios_sdread(kva2pa(TASK_ADDRESS), block_num, block_id);
     for (short i = 0; i < task_num; i++)
     {
         tasks[i] = *((task_info_t *)(unsigned long)(TASK_ADDRESS + offset));
@@ -202,9 +202,27 @@ static void init_syscall(void)
     syscall[SYSCALL_CREATE_THREAD] = (long (*)())create_thread;
 }
 
+void cancel_mapping()
+{
+    PTE* pg_dir = (PTE*)pa2kva(PGDIR_PA);
+    for (uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu) 
+    {
+        uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
+        uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
+        PTE* pme = (PTE*) pa2kva(get_pa(pg_dir[vpn2]));
+        PTE* pte = (PTE*) pa2kva(get_pa(pme[vpn1]));
+        uint64_t addr = get_pa(pte);
+        *pme = *pte = 0;
+    }
+    set_satp(SATP_MODE_SV39, 0, PGDIR_PA >> NORMAL_PAGE_SHIFT);
+    local_flush_tlb_all();
+}
+
 int main(void)
 {
     int cpu_id = get_current_cpu_id();
+
+    cancel_mapping();
 
     // note that core 1 only need to setup exception and the first time interrupt
     // other initialization should be done by core 0
@@ -223,7 +241,7 @@ int main(void)
     init_jmptab();
 
     // Init task information (〃'▽'〃)
-    init_task_info();
+    //init_task_info();
 
     // Init Process Control Blocks |•'-'•) ✧
     init_pcb();
@@ -260,11 +278,12 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
+    while (1);
     // init the lock
     smp_init();
 
     // wakeup_other_hart()
-    wakeup_other_hart();
+    // wakeup_other_hart();
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
