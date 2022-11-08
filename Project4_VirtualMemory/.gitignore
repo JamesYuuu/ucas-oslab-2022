@@ -3,3 +3,4 @@ build
 *.txt
 .history
 .gdbinit
+note.md
