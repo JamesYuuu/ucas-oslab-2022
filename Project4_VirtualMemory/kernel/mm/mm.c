@@ -59,17 +59,17 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir)
     
     if (pg_base[vpn2] == 0)
     {
-        set_pfn(&pg_base[vpn2], allocPage(1) >> NORMAL_PAGE_SHIFT);
+        set_pfn(&pg_base[vpn2], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
         set_attribute(&pg_base[vpn2], _PAGE_PRESENT | _PAGE_USER);
-        clear_pgdir(kva2pa(get_pa(pg_base[vpn2])));
+        clear_pgdir(pa2kva(get_pa(pg_base[vpn2])));
     }
     
     PTE *pmd = (PTE *)pa2kva(get_pa(pg_base[vpn2]));
     if (pmd[vpn1] == 0)
     {
-        set_pfn(&pmd[vpn1], allocPage(1) >> NORMAL_PAGE_SHIFT);
+        set_pfn(&pmd[vpn1], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
         set_attribute(&pmd[vpn1], _PAGE_PRESENT | _PAGE_USER);
-        clear_pgdir(kva2pa(get_pa(pmd[vpn1])));
+        clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
     }
 
     PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));

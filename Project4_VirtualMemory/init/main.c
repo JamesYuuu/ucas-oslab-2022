@@ -126,11 +126,8 @@ static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     // Note that tasks[0] is shell and we only need to load shell
-    for (int i=0;i<TASK_MAXNUM;i++)
-    {
-        pcb[i].kernel_stack_base = allocPage(1);
-        pcb[i].user_stack_base = (ptr_t)0xf00010000UL;
-    }
+    pcb[0].kernel_stack_base = allocPage(1);
+    pcb[0].user_stack_base = (ptr_t)USER_STACK_ADDR;
     pcb[0].pid = 1;
     pcb[0].kernel_sp = pcb[0].kernel_stack_base;
     pcb[0].user_sp = pcb[0].user_stack_base;
@@ -142,7 +139,7 @@ static void init_pcb(void)
 
     pcb[0].pgdir = (uintptr_t) allocPage(1);
     
-    memcpy((void *)pcb[0].pgdir, (void *)PGDIR_KVA, PAGE_SIZE);
+    memcpy((void *)pcb[0].pgdir, (void *)PGDIR_KVA, NORMAL_PAGE_SIZE);
 
     int page_num = tasks[0].memsz / PAGE_SIZE + 1;
 
@@ -150,8 +147,10 @@ static void init_pcb(void)
     {
         uintptr_t va = tasks[0].entry_point + j * PAGE_SIZE;
         uintptr_t kva = alloc_page_helper(va, pcb[0].pgdir);
-        // load_task_img(0,kva,j);
+        load_task_img(0,kva,j);
     }
+
+    alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[0].pgdir);
 
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, tasks[0].entry_point, &pcb[0]);
     list_add(&ready_queue, &(pcb[0].list));
@@ -292,7 +291,6 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
-    while (1);
     // init the lock
     smp_init();
 

@@ -108,6 +108,9 @@ void do_scheduler(void)
     list_del(current_list);
     current_running[cpu_id]=list_to_pcb(current_list);
     current_running[cpu_id]->status = TASK_RUNNING;
+    unsigned long ppn = kva2pa(current_running[cpu_id]->pgdir) >> NORMAL_PAGE_SHIFT;
+    set_satp(SATP_MODE_SV39,current_running[cpu_id]->pid,ppn);
+    local_flush_tlb_all(); 
     // TODO: [p2-task1] switch_to current_running[cpu_id]
     switch_to(prev_running,current_running[cpu_id]);
 }

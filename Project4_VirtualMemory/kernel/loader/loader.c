@@ -3,10 +3,10 @@
 #include <os/kernel.h>
 #include <type.h>
 
-#define BLOCK_NUM       15
+#define BLOCK_SIZE 512
+#define BLOCK_NUM NORMAL_PAGE_SIZE / BLOCK_SIZE
 
-//uint64_t load_task_img(int task_id)
-uint64_t load_task_img(char *taskname)
+void load_task_img(int task_id, uintptr_t kva, int page_num)
 {
     /**
      * TODO:
@@ -14,22 +14,32 @@ uint64_t load_task_img(char *taskname)
      * 2. [p1-task4] load task via task name, thus the arg should be 'char *taskname'
      */
 
-    for (short i=0;i<TASK_MAXNUM;i++)
+    int filesz = tasks[task_id].filesz;
+    int memsz = tasks[task_id].memsz;
+
+    // If this page is bss sector, set it to zero and return;
+    if (page_num * NORMAL_PAGE_SIZE > filesz)
     {
-        if (strcmp(taskname,tasks[i].task_name)==0)
-        {   
-            int offset=tasks[i].start_addr%512;
-            int block_num=(tasks[i].filesz-1)/512+1;
-            int block_id=tasks[i].start_addr/512;
-            int task_size=tasks[i].filesz;
-            bios_sdread(tasks[i].entry_point,block_num,block_id);
-           
-            // The code below copy the app to the original place if needed
-            uint8_t *dest=(uint8_t*)tasks[i].entry_point;
-            uint8_t *src=(uint8_t*)(tasks[i].entry_point+offset);
-            memcpy(dest,src,task_size);
-            return tasks[i].entry_point;     
-        }
+        memset((void *)(kva), 0, NORMAL_PAGE_SIZE);
+        return;
     }
-    return 0;
+
+    // If page_num = 0, we need to align
+    if (page_num == 0)
+    {
+        int offset = tasks[task_id].start_addr % BLOCK_SIZE;
+        int block_id = tasks[task_id].start_addr / BLOCK_SIZE;
+        bios_sdread(kva2pa(kva), BLOCK_NUM, block_id);
+        memcpy((void *)kva, (void *)(kva + offset), NORMAL_PAGE_SIZE);
+    }
+    else
+    {
+        int block_id = tasks[task_id].start_addr / BLOCK_SIZE + page_num * BLOCK_NUM;
+        bios_sdread(kva2pa(kva), BLOCK_NUM, block_id);
+    }
+
+    if ((page_num + 1) * NORMAL_PAGE_SIZE > filesz)
+        memset((void *)(kva + filesz - page_num * NORMAL_PAGE_SIZE), 0, (page_num + 1) * NORMAL_PAGE_SIZE - filesz);
+
+    return;
 }
