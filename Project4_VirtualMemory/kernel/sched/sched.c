@@ -24,6 +24,7 @@ pcb_t pid0_pcb = {
     .user_sp = (ptr_t)pid0_stack_ori,
     .kernel_stack_base = (ptr_t)pid0_stack_ori,
     .user_stack_base = (ptr_t)pid0_stack_ori,
+    .pgdir = (uintptr_t) PGDIR_KVA,
 };
 
 pcb_t pid1_pcb = {
@@ -32,6 +33,7 @@ pcb_t pid1_pcb = {
     .user_sp = (ptr_t)pid1_stack_ori,
     .kernel_stack_base = (ptr_t)pid1_stack_ori,
     .user_stack_base = (ptr_t)pid1_stack_ori,
+    .pgdir = (uintptr_t) PGDIR_KVA,
 };
 
 LIST_HEAD(ready_queue);
