@@ -226,7 +226,7 @@ void cancel_mapping()
     {
         uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
         PTE *pmd = &pg_dir[vpn2];
-        *pmd = 0;
+        set_attribute(pmd, 0);
     }
 
     set_satp(SATP_MODE_SV39, 0, PGDIR_PA >> NORMAL_PAGE_SHIFT);

@@ -33,7 +33,7 @@ MINICOM         = minicom
 # Build/Debug Flags and Variables
 # -----------------------------------------------------------------------
 
-CFLAGS          = -O0 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
+CFLAGS          = -O2 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
 
 BOOT_INCLUDE    = -I$(DIR_ARCH)/include
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
@@ -150,7 +150,10 @@ debug-smp:
 minicom:
 	sudo $(MINICOM) -D $(TTYUSB1)
 
-.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom
+padding:
+	dd if=/dev/zero of=./build/image oflag=append conv=notrunc bs=512MB count=2
+
+.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom padding
 
 # -----------------------------------------------------------------------
 # UCAS-OS Rules
