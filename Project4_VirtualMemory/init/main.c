@@ -139,13 +139,14 @@ static void init_pcb(void)
     pcb[0].thread_num = -1;
     pcb[0].is_used = 1;
     pcb[0].mask = CORE_BOTH;
-
+    // alloc page dir
     pcb[0].pgdir = (uintptr_t)allocPage(1);
-
+    // copy kernel page table to user page table
     memcpy((void *)pcb[0].pgdir, (void *)PGDIR_KVA, NORMAL_PAGE_SIZE);
-
+    // alloc user stack
+    alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[0].pgdir);
+    // alloc user page table and copy task_image to kva
     int page_num = tasks[0].memsz / NORMAL_PAGE_SIZE + 1;
-
     uintptr_t prev_kva;
     for (int j = 0; j < page_num; j++)
     {
@@ -154,9 +155,7 @@ static void init_pcb(void)
         load_task_img(0, kva, prev_kva, j);
         prev_kva = kva;
     }
-
-    alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[0].pgdir);
-
+    // init pcb stack
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, tasks[0].entry_point, &pcb[0]);
     list_add(&ready_queue, &(pcb[0].list));
     /* TODO: [p2-task1] remember to initialize 'current_running' */

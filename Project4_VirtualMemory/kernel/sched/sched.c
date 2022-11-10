@@ -173,13 +173,12 @@ pid_t do_exec(char *name, int argc, char *argv[])
         return 0;
     // alloc pgdir
     pcb[freepcb].pgdir = (uintptr_t)allocPage(1);
-
+    // copy kernel page table to user page table
     memcpy((void *)pcb[freepcb].pgdir, (void *)PGDIR_KVA, NORMAL_PAGE_SIZE);
-
+    // alloc user stack
     alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[freepcb].pgdir);
-    
+    // alloc user page table and copy task_image to kva    
     int page_num = tasks[task_id].memsz / NORMAL_PAGE_SIZE + 1;
-
     uintptr_t prev_kva;
     for (int j = 0; j < page_num; j++)
     {
@@ -196,16 +195,15 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pcb[freepcb].thread_num = -1;
     list_init(&pcb[freepcb].wait_list);
     list_add(&ready_queue, &pcb[freepcb].list);
-    // copy argv to user_stack
-    
-    unsigned long ppn = kva2pa(pcb[freepcb].pgdir) >> NORMAL_PAGE_SHIFT;
-
+    // temporarily copy argv to kernel 
     char *argv_buff[argc];
     for (int i = 0; i < argc; i++)
         strcpy(argv_buff[i], argv[i]);
-
+    // temporarily change page table to exec process to copy argv
+    unsigned long ppn = kva2pa(pcb[freepcb].pgdir) >> NORMAL_PAGE_SHIFT;
     set_satp(SATP_MODE_SV39, pcb[freepcb].pid, ppn);
     local_flush_tlb_all();
+    // copy argv to user stack
     char *p[argc];
     for (int i = 0; i < argc; i++)
     {
@@ -244,15 +242,13 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pt_switchto->regs[1] = (reg_t)user_stack;         // sp
     pcb[freepcb].kernel_sp = (ptr_t)pt_switchto;
     pcb[freepcb].is_used = 1;
-
     // inherit mask from shell or it's parent
     int cpu_id = get_current_cpu_id();
     pcb[freepcb].mask = current_running[cpu_id]->mask;
-
+    // change to current_running pgdir
     ppn = kva2pa(current_running[cpu_id]->pgdir) >> NORMAL_PAGE_SHIFT;
     set_satp(SATP_MODE_SV39, current_running[cpu_id]->pid, ppn);
     local_flush_tlb_all();
-
     return process_id;
 }
 
