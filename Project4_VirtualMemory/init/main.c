@@ -126,8 +126,11 @@ static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     // Note that tasks[0] is shell and we only need to load shell
-    pcb[0].kernel_stack_base = allocPage(1);
-    pcb[0].user_stack_base = (ptr_t)USER_STACK_ADDR;
+    for (int i = 0; i < TASK_MAXNUM; i++)
+    {
+        pcb[i].kernel_stack_base = allocPage(1);
+        pcb[i].user_stack_base = (ptr_t)USER_STACK_ADDR;
+    }
     pcb[0].pid = 1;
     pcb[0].kernel_sp = pcb[0].kernel_stack_base;
     pcb[0].user_sp = pcb[0].user_stack_base;
@@ -137,18 +140,18 @@ static void init_pcb(void)
     pcb[0].is_used = 1;
     pcb[0].mask = CORE_BOTH;
 
-    pcb[0].pgdir = (uintptr_t) allocPage(1);
-    
+    pcb[0].pgdir = (uintptr_t)allocPage(1);
+
     memcpy((void *)pcb[0].pgdir, (void *)PGDIR_KVA, NORMAL_PAGE_SIZE);
 
     int page_num = tasks[0].memsz / NORMAL_PAGE_SIZE + 1;
 
     uintptr_t prev_kva;
-    for (int j=0;j<page_num;j++)
+    for (int j = 0; j < page_num; j++)
     {
         uintptr_t va = tasks[0].entry_point + j * NORMAL_PAGE_SIZE;
         uintptr_t kva = alloc_page_helper(va, pcb[0].pgdir);
-        load_task_img(0,kva,prev_kva,j);
+        load_task_img(0, kva, prev_kva, j);
         prev_kva = kva;
     }
 
@@ -219,11 +222,11 @@ static void init_syscall(void)
 void cancel_mapping()
 {
     // Cancel temporary mapping by setting the pmd to 0
-    PTE* pg_dir = (PTE*)PGDIR_KVA;
-    for (uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu) 
+    PTE *pg_dir = (PTE *)PGDIR_KVA;
+    for (uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu)
     {
         uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
-        PTE* pmd = &pg_dir[vpn2];
+        PTE *pmd = &pg_dir[vpn2];
         *pmd = 0;
     }
 
@@ -237,7 +240,7 @@ int main(void)
 
     // note that core 1 only need to setup exception and the first time interrupt
     // other initialization should be done by core 0
-    if (cpu_id == 1) 
+    if (cpu_id == 1)
     {
         setup_exception();
         set_timer(get_ticks() + TIMER_INTERVAL);

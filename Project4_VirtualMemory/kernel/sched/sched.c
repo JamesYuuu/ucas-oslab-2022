@@ -87,6 +87,7 @@ void do_scheduler(void)
             pcb_t *prev_running = current_running[cpu_id];
             current_running[cpu_id] = (cpu_id == 0) ? &pid0_pcb : &pid1_pcb;
             set_satp(SATP_MODE_SV39, 0, PGDIR_PA >> NORMAL_PAGE_SHIFT);
+            local_flush_tlb_all();
             switch_to(prev_running, current_running[cpu_id]);
             return;
         }
@@ -152,14 +153,14 @@ void do_unblock(list_node_t *pcb_node)
 pid_t do_exec(char *name, int argc, char *argv[])
 {
     // init pcb
-    uint64_t entry_point = 0;
+    int task_id = 0;
     for (int i = 0; i < TASK_MAXNUM; i++)
         if (strcmp(tasks[i].task_name, name) == 0)
         {
-            entry_point = tasks[i].entry_point;
+            task_id = i;
             break;
         }
-    if (entry_point == 0)
+    if (task_id == 0)
         return 0;
     int freepcb = 0;
     for (int i = 1; i < NUM_MAX_TASK; i++)
@@ -170,6 +171,23 @@ pid_t do_exec(char *name, int argc, char *argv[])
         }
     if (freepcb == 0)
         return 0;
+    // alloc pgdir
+    pcb[freepcb].pgdir = (uintptr_t)allocPage(1);
+
+    memcpy((void *)pcb[freepcb].pgdir, (void *)PGDIR_KVA, NORMAL_PAGE_SIZE);
+
+    alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[freepcb].pgdir);
+    
+    int page_num = tasks[task_id].memsz / NORMAL_PAGE_SIZE + 1;
+
+    uintptr_t prev_kva;
+    for (int j = 0; j < page_num; j++)
+    {
+        uintptr_t va = tasks[task_id].entry_point + j * NORMAL_PAGE_SIZE;
+        uintptr_t kva = alloc_page_helper(va, pcb[freepcb].pgdir);
+        load_task_img(task_id, kva, prev_kva, j);
+        prev_kva = kva;
+    }
     pcb[freepcb].pid = ++process_id;
     pcb[freepcb].kernel_sp = pcb[freepcb].kernel_stack_base;
     pcb[freepcb].user_sp = pcb[freepcb].user_stack_base;
@@ -179,12 +197,21 @@ pid_t do_exec(char *name, int argc, char *argv[])
     list_init(&pcb[freepcb].wait_list);
     list_add(&ready_queue, &pcb[freepcb].list);
     // copy argv to user_stack
+    
+    unsigned long ppn = kva2pa(pcb[freepcb].pgdir) >> NORMAL_PAGE_SHIFT;
+
+    char *argv_buff[argc];
+    for (int i = 0; i < argc; i++)
+        strcpy(argv_buff[i], argv[i]);
+
+    set_satp(SATP_MODE_SV39, pcb[freepcb].pid, ppn);
+    local_flush_tlb_all();
     char *p[argc];
     for (int i = 0; i < argc; i++)
     {
-        int len = strlen(argv[i]) + 1;
+        int len = strlen(argv_buff[i]) + 1;
         pcb[freepcb].user_sp -= len;
-        strcpy((char *)pcb[freepcb].user_sp, argv[i]);
+        strcpy((char *)pcb[freepcb].user_sp, argv_buff[i]);
         p[i] = (char *)pcb[freepcb].user_sp;
     }
     pcb[freepcb].user_sp -= sizeof(p);
@@ -204,8 +231,8 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pt_regs->regs[10] = (reg_t)argc;         // a0
     pt_regs->regs[11] = addr_argv;           // a1
     // special registers
-    pt_regs->sstatus = SR_SPIE & ~SR_SPP; // make spie(1) and spp(0)
-    pt_regs->sepc = (reg_t)entry_point;
+    pt_regs->sstatus = SR_SPIE & ~SR_SPP | SR_SUM; // make spie(1) and spp(0)
+    pt_regs->sepc = (reg_t)tasks[task_id].entry_point;
     pt_regs->sbadaddr = 0;
     pt_regs->scause = 0;
     // init switch_to context
@@ -221,6 +248,10 @@ pid_t do_exec(char *name, int argc, char *argv[])
     // inherit mask from shell or it's parent
     int cpu_id = get_current_cpu_id();
     pcb[freepcb].mask = current_running[cpu_id]->mask;
+
+    ppn = kva2pa(current_running[cpu_id]->pgdir) >> NORMAL_PAGE_SHIFT;
+    set_satp(SATP_MODE_SV39, current_running[cpu_id]->pid, ppn);
+    local_flush_tlb_all();
 
     return process_id;
 }
