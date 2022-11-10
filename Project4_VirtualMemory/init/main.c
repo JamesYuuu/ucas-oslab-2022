@@ -141,15 +141,15 @@ static void init_pcb(void)
     
     memcpy((void *)pcb[0].pgdir, (void *)PGDIR_KVA, NORMAL_PAGE_SIZE);
 
-    int page_num = tasks[0].memsz / PAGE_SIZE + 1;
+    int page_num = tasks[0].memsz / NORMAL_PAGE_SIZE + 1;
 
     uintptr_t prev_kva;
     for (int j=0;j<page_num;j++)
     {
-        uintptr_t va = tasks[0].entry_point + j * PAGE_SIZE;
+        uintptr_t va = tasks[0].entry_point + j * NORMAL_PAGE_SIZE;
         uintptr_t kva = alloc_page_helper(va, pcb[0].pgdir);
-        prev_kva = kva;
         load_task_img(0,kva,prev_kva,j);
+        prev_kva = kva;
     }
 
     alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[0].pgdir);

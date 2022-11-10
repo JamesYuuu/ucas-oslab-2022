@@ -51,8 +51,6 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir)
 
     uintptr_t kva = allocPage(1);
 
-    uintptr_t pa = kva2pa(kva);
-
     uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
     uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
     uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
@@ -73,7 +71,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir)
     }
 
     PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));
-    set_pfn(&pte[vpn0], pa >> NORMAL_PAGE_SHIFT);
+    set_pfn(&pte[vpn0], kva2pa(kva) >> NORMAL_PAGE_SHIFT);
     set_attribute(&pte[vpn0], _PAGE_PRESENT | _PAGE_USER | _PAGE_DIRTY | _PAGE_ACCESSED
                       | _PAGE_EXEC | _PAGE_WRITE | _PAGE_READ);
 
