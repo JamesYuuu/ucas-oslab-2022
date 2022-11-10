@@ -223,9 +223,8 @@ void cancel_mapping()
     for (uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu) 
     {
         uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
-        uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
         PTE* pmd = &pg_dir[vpn2];
-        set_attribute(&pmd[vpn1],0);     // set it invalid 
+        *pmd = 0;
     }
 
     set_satp(SATP_MODE_SV39, 0, PGDIR_PA >> NORMAL_PAGE_SHIFT);
