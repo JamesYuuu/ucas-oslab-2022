@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <screen.h>
 #include <csr.h>
+#include <os/mm.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
@@ -36,6 +37,8 @@ void init_exception()
     for (int i=0;i<EXCC_COUNT;i++)
         exc_table[i]=(handler_t)handle_other;
     exc_table[EXCC_SYSCALL]=(handler_t)handle_syscall;
+    exc_table[EXCC_LOAD_PAGE_FAULT]=(handler_t)handle_page_fault;
+    exc_table[EXCC_STORE_PAGE_FAULT]=(handler_t)handle_page_fault;
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
     for (int i=0;i<IRQC_COUNT;i++)
@@ -67,4 +70,11 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
     printk("sepc: 0x%lx\n\r", regs->sepc);
     printk("tval: 0x%lx cause: 0x%lx\n", stval, scause);
     assert(0);
+}
+
+void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
+{
+    int cpu_id = get_current_cpu_id();
+    alloc_page_helper(stval,current_running[cpu_id]->pgdir);
+    local_flush_tlb_all();
 }

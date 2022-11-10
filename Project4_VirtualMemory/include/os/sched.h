@@ -36,6 +36,9 @@
 #define NUM_MAX_TASK 16
 #define NUM_MAX_THREAD 4
 
+#define ARG_MAX 10
+#define ARG_LEN 20
+
 /* used to save register infomation */
 typedef struct regs_context
 {

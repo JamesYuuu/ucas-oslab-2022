@@ -196,7 +196,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
     list_init(&pcb[freepcb].wait_list);
     list_add(&ready_queue, &pcb[freepcb].list);
     // temporarily copy argv to kernel 
-    char *argv_buff[argc];
+    char argv_buff[ARG_MAX][ARG_LEN];
     for (int i = 0; i < argc; i++)
         strcpy(argv_buff[i], argv[i]);
     // temporarily change page table to exec process to copy argv
