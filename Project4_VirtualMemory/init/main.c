@@ -104,7 +104,7 @@ static void init_pcb_stack(
     pt_regs->regs[2] = (reg_t)user_stack; // sp
     pt_regs->regs[4] = (reg_t)pcb;        // tp
     // special registers
-    pt_regs->sstatus = SR_SPIE & ~SR_SPP; // make spie(1) and spp(0)
+    pt_regs->sstatus = SR_SPIE & ~SR_SPP | SR_SUM; // make spie(1) and spp(0)
     pt_regs->sepc = (reg_t)entry_point;
     pt_regs->sbadaddr = 0;
     pt_regs->scause = 0;
@@ -143,11 +143,13 @@ static void init_pcb(void)
 
     int page_num = tasks[0].memsz / PAGE_SIZE + 1;
 
+    uintptr_t prev_kva;
     for (int j=0;j<page_num;j++)
     {
         uintptr_t va = tasks[0].entry_point + j * PAGE_SIZE;
         uintptr_t kva = alloc_page_helper(va, pcb[0].pgdir);
-        load_task_img(0,kva,j);
+        prev_kva = kva;
+        load_task_img(0,kva,prev_kva,j);
     }
 
     alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[0].pgdir);

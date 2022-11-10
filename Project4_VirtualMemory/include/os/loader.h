@@ -3,6 +3,6 @@
 
 #include <type.h>
 
-void load_task_img(int task_id, uintptr_t kva, int page_num);
+void load_task_img(int task_id, uintptr_t kva, uintptr_t prev_kva, int page_num);
 
 #endif
