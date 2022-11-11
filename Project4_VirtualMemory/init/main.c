@@ -244,6 +244,8 @@ int main(void)
     // other initialization should be done by core 0
     if (cpu_id == 1)
     {
+        // Cancel previous mapping for boot.c
+        cancel_mapping();
         setup_exception();
         set_timer(get_ticks() + TIMER_INTERVAL);
         while (1)
@@ -252,9 +254,6 @@ int main(void)
             asm volatile("wfi");
         }
     }
-
-    // Cancel previous mapping for boot.c
-    cancel_mapping();
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();

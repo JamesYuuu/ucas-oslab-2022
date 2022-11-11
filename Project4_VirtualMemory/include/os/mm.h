@@ -44,10 +44,20 @@
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
+typedef enum page_type{
+    PAGE_MEM,
+    PAGE_DISK,
+}page_type_t;
+
 typedef struct mm_page{
     uintptr_t va;
-    uintptr_t kva;
     list_head list;
+    page_type_t page_type;
+    union
+    {
+        uintptr_t kva;
+        uint32_t block_num;
+    };
 } mm_page_t;
 
 extern mm_page_t* allocPage();

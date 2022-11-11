@@ -9,7 +9,7 @@ mm_page_t free_page[PAGE_NUM];
 
 LIST_HEAD(free_mm_list);
 
-mm_page_t* allocPage()
+mm_page_t *allocPage()
 {
     // align PAGE_SIZE
     list_node_t *free_mem_list = free_mm_list.prev;
@@ -25,7 +25,7 @@ ptr_t allocLargePage(int numPage)
     // align LARGE_PAGE_SIZE
     ptr_t ret = ROUND(largePageMemCurr, LARGE_PAGE_SIZE);
     largePageMemCurr = ret + numPage * LARGE_PAGE_SIZE;
-    return ret;    
+    return ret;
 }
 #endif
 
@@ -34,8 +34,8 @@ void freePage(list_node_t *mm_list)
     // TODO [P4-task1] (design you 'freePage' here if you need):
     list_node_t *pgdir_list = mm_list->prev;
     list_del(pgdir_list);
-    list_add(&free_mm_list,pgdir_list);
-    PTE* pgdir = (PTE*)list_to_mm(pgdir_list)->kva;
+    list_add(&free_mm_list, pgdir_list);
+    PTE *pgdir = (PTE *)list_to_mm(pgdir_list)->kva;
     while (!list_empty(mm_list))
     {
         // recycle memory
@@ -48,7 +48,7 @@ void freePage(list_node_t *mm_list)
         uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
         uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
         uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
-        del_attribute(&pgdir[vpn2], _PAGE_PRESENT);  
+        del_attribute(&pgdir[vpn2], _PAGE_PRESENT);
         PTE *pmd = (PTE *)pa2kva(get_pa(pgdir[vpn2]));
         del_attribute(&pmd[vpn1], _PAGE_PRESENT);
         PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));
@@ -61,12 +61,11 @@ void *kmalloc(size_t size)
     // TODO [P4-task1] (design you 'kmalloc' here if you need):
 }
 
-
 /* this is used for mapping kernel virtual address into user page table */
 void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 {
     // TODO [P4-task1] share_pgtable:
-    memcpy((void*)dest_pgdir, (void*)src_pgdir, PAGE_SIZE);
+    memcpy((void *)dest_pgdir, (void *)src_pgdir, PAGE_SIZE);
 }
 
 /* allocate physical page for `va`, mapping it into `pgdir`,
@@ -78,26 +77,26 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb)
 
     PTE *pg_base = (PTE *)pcb->pgdir;
 
-    mm_page_t* free_page = allocPage();
+    mm_page_t *free_page = allocPage();
     free_page->va = va;
-    list_add(&pcb->mm_list,&free_page->list);
+    list_add(&pcb->mm_list, &free_page->list);
 
     uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
     uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
     uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
-    
+
     if (pg_base[vpn2] == 0)
     {
-        mm_page_t* free_page_table = allocPage();
+        mm_page_t *free_page_table = allocPage();
         set_pfn(&pg_base[vpn2], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
         clear_pgdir(pa2kva(get_pa(pg_base[vpn2])));
     }
-    set_attribute(&pg_base[vpn2], _PAGE_PRESENT | _PAGE_USER);  
+    set_attribute(&pg_base[vpn2], _PAGE_PRESENT | _PAGE_USER);
     PTE *pmd = (PTE *)pa2kva(get_pa(pg_base[vpn2]));
 
     if (pmd[vpn1] == 0)
     {
-        mm_page_t* free_page_table = allocPage();
+        mm_page_t *free_page_table = allocPage();
         set_pfn(&pmd[vpn1], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
         clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
     }
@@ -122,15 +121,16 @@ void shm_page_dt(uintptr_t addr)
 
 void init_memory()
 {
-    for (int i=0;i<PAGE_NUM;i++)
+    for (int i = 0; i < PAGE_NUM; i++)
     {
         uint64_t addr = FREEMEM_KERNEL + i * NORMAL_PAGE_SIZE;
         free_page[i].kva = addr;
-        list_add(&free_mm_list,&free_page[i].list);
+        free_page[i].page_type = PAGE_MEM;
+        list_add(&free_mm_list, &free_page[i].list);
     }
 }
 
-extern mm_page_t* list_to_mm(list_node_t *list)
+mm_page_t *list_to_mm(list_node_t *list)
 {
-    return (mm_page_t*)((uint64_t)list - 2 * sizeof(uintptr_t));
+    return (mm_page_t *)((uint64_t)list - sizeof(uintptr_t));
 }
