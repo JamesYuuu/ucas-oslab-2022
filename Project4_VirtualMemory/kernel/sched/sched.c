@@ -172,18 +172,20 @@ pid_t do_exec(char *name, int argc, char *argv[])
     if (freepcb == 0)
         return 0;
     // alloc pgdir
-    pcb[freepcb].pgdir = (uintptr_t)allocPage(1);
+    mm_page_t *page_dir = allocPage();
+    list_add(&pcb[freepcb].mm_list,&page_dir->list);
+    pcb[freepcb].pgdir = page_dir->kva;
     // copy kernel page table to user page table
-    memcpy((void *)pcb[freepcb].pgdir, (void *)PGDIR_KVA, NORMAL_PAGE_SIZE);
+    share_pgtable(pcb[freepcb].pgdir, PGDIR_KVA);
     // alloc user stack
-    alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[freepcb].pgdir);
+    alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, &pcb[freepcb]);
     // alloc user page table and copy task_image to kva    
     int page_num = tasks[task_id].memsz / NORMAL_PAGE_SIZE + 1;
     uintptr_t prev_kva;
     for (int j = 0; j < page_num; j++)
     {
         uintptr_t va = tasks[task_id].entry_point + j * NORMAL_PAGE_SIZE;
-        uintptr_t kva = alloc_page_helper(va, pcb[freepcb].pgdir);
+        uintptr_t kva = alloc_page_helper(va, &pcb[freepcb]);
         load_task_img(task_id, kva, prev_kva, j);
         prev_kva = kva;
     }
@@ -193,7 +195,6 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pcb[freepcb].status = TASK_READY;
     pcb[freepcb].cursor_x = pcb[freepcb].cursor_y = 0;
     pcb[freepcb].thread_num = -1;
-    list_init(&pcb[freepcb].wait_list);
     list_add(&ready_queue, &pcb[freepcb].list);
     // temporarily copy argv to kernel 
     char argv_buff[ARG_MAX][ARG_LEN];
@@ -282,6 +283,8 @@ int do_kill(pid_t pid)
     for (int i = 0; i < LOCK_NUM; i++)
         if (mlocks[i].pid == pid)
             do_mutex_lock_release(i);
+    // free page
+    freePage(&pcb[current_pcb].mm_list);
     return pid;
 }
 
@@ -306,6 +309,8 @@ void do_exit(void)
     for (int i = 0; i < LOCK_NUM; i++)
         if (mlocks[i].pid == current_running[cpu_id]->pid)
             do_mutex_lock_release(i);
+    // free page
+    freePage(&pcb[current_pcb].mm_list);
     // Find the next process to run
     do_scheduler();
 }

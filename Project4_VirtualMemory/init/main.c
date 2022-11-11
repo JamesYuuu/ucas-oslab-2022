@@ -128,8 +128,10 @@ static void init_pcb(void)
     // Note that tasks[0] is shell and we only need to load shell
     for (int i = 0; i < TASK_MAXNUM; i++)
     {
-        pcb[i].kernel_stack_base = allocPage(1);
+        pcb[i].kernel_stack_base = allocPage()->kva;
         pcb[i].user_stack_base = (ptr_t)USER_STACK_ADDR;
+        list_init(&pcb[i].wait_list);
+        list_init(&pcb[i].mm_list);
     }
     pcb[0].pid = 1;
     pcb[0].kernel_sp = pcb[0].kernel_stack_base;
@@ -140,18 +142,20 @@ static void init_pcb(void)
     pcb[0].is_used = 1;
     pcb[0].mask = CORE_BOTH;
     // alloc page dir
-    pcb[0].pgdir = (uintptr_t)allocPage(1);
+    mm_page_t *page_dir = allocPage();
+    list_add(&pcb[0].mm_list,&page_dir->list);
+    pcb[0].pgdir = page_dir->kva;
     // copy kernel page table to user page table
-    memcpy((void *)pcb[0].pgdir, (void *)PGDIR_KVA, NORMAL_PAGE_SIZE);
+    share_pgtable(pcb[0].pgdir, PGDIR_KVA);
     // alloc user stack
-    alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb[0].pgdir);
+    alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, &pcb[0]);
     // alloc user page table and copy task_image to kva
     int page_num = tasks[0].memsz / NORMAL_PAGE_SIZE + 1;
     uintptr_t prev_kva;
     for (int j = 0; j < page_num; j++)
     {
         uintptr_t va = tasks[0].entry_point + j * NORMAL_PAGE_SIZE;
-        uintptr_t kva = alloc_page_helper(va, pcb[0].pgdir);
+        uintptr_t kva = alloc_page_helper(va, &pcb[0]);
         load_task_img(0, kva, prev_kva, j);
         prev_kva = kva;
     }
@@ -225,8 +229,7 @@ void cancel_mapping()
     for (uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu)
     {
         uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
-        PTE *pmd = &pg_dir[vpn2];
-        set_attribute(pmd, 0);
+        del_attribute(&pg_dir[vpn2], _PAGE_PRESENT);
     }
 
     set_satp(SATP_MODE_SV39, 0, PGDIR_PA >> NORMAL_PAGE_SHIFT);
@@ -255,6 +258,9 @@ int main(void)
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
+
+    // Init memory management (0_0)
+    init_memory();
 
     // Init task information (〃'▽'〃)
     init_task_info();

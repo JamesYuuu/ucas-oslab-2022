@@ -75,6 +75,6 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     int cpu_id = get_current_cpu_id();
-    alloc_page_helper(stval,current_running[cpu_id]->pgdir);
+    alloc_page_helper(stval,current_running[cpu_id]);
     local_flush_tlb_all();
 }

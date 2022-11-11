@@ -28,6 +28,8 @@
 
 #include <type.h>
 #include <pgtable.h>
+#include <os/list.h>
+#include <os/sched.h>
 
 #define MAP_KERNEL 1
 #define MAP_USER 2
@@ -35,14 +37,22 @@
 #define PAGE_SIZE 4096 // 4K
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK + PAGE_SIZE * 3)
+#define FREEMEM_KERNEL_END 0xffffffc060000000
+#define PAGE_NUM (FREEMEM_KERNEL_END-FREEMEM_KERNEL)/NORMAL_PAGE_SIZE
 
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
-extern ptr_t allocPage(int numPage);
+typedef struct mm_page{
+    uintptr_t va;
+    uintptr_t kva;
+    list_head list;
+} mm_page_t;
+
+extern mm_page_t* allocPage();
 // TODO [P4-task1] */
-void freePage(ptr_t baseAddr);
+void freePage(list_node_t* mm_list);
 
 // #define S_CORE
 // NOTE: only need for S-core to alloc 2MB large page
@@ -58,12 +68,14 @@ extern ptr_t allocLargePage(int numPage);
 // TODO [P4-task1] */
 extern void* kmalloc(size_t size);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
-extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir);
+extern uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb);
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 
+extern void init_memory();
 
+extern mm_page_t* list_to_mm(list_node_t *list);
 
 #endif /* MM_H */
