@@ -2,10 +2,14 @@
 #define __INCLUDE_TASK_H__
 
 #include <type.h>
+#include <pgtable.h>
 
 #define TASK_MEM_BASE    0x52000000
 #define TASK_MAXNUM      16
 #define TASK_SIZE        0x10000
+
+#define BLOCK_SIZE 512
+#define BLOCK_NUM (NORMAL_PAGE_SIZE / BLOCK_SIZE)
 
 #define NAME_MAXNUM      16
 /* TODO: [p1-task4] implement your own task_info_t! */

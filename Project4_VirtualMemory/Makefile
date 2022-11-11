@@ -117,7 +117,7 @@ ELF_CREATEIMAGE = $(DIR_BUILD)/$(notdir $(SRC_CREATEIMAGE:.c=))
 # Top-level Rules
 # -----------------------------------------------------------------------
 
-all: dirs elf image asm # floppy
+all: dirs elf image asm padding# floppy
 
 dirs:
 	@mkdir -p $(DIR_BUILD)
@@ -151,9 +151,12 @@ minicom:
 	sudo $(MINICOM) -D $(TTYUSB1)
 
 padding:
-	dd if=/dev/zero of=./build/image oflag=append conv=notrunc bs=512MB count=2
+	dd if=/dev/zero of=$(ELF_IMAGE) oflag=append conv=notrunc bs=512MB count=2
 
-.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom padding
+stat:
+	stat $(ELF_IMAGE)
+
+.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom padding stat
 
 # -----------------------------------------------------------------------
 # UCAS-OS Rules

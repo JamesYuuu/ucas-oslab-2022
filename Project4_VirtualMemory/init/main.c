@@ -255,14 +255,19 @@ int main(void)
         }
     }
 
+    // FIXME: delete after double core
+    // Cancel previous mapping for boot.c
+    cancel_mapping();
+
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
 
-    // Init memory management (0_0)
-    init_memory();
-
     // Init task information (〃'▽'〃)
     init_task_info();
+
+    // Init memory management (0_0)
+    init_memory();
+    init_disk();
 
     // Init Process Control Blocks |•'-'•) ✧
     init_pcb();

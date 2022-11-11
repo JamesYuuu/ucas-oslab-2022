@@ -1,18 +1,26 @@
 #include <os/mm.h>
 #include <os/list.h>
 #include <os/sched.h>
+#include <os/task.h>
+#include <common.h>
 
 // NOTE: A/C-core
 static ptr_t kernMemCurr = FREEMEM_KERNEL;
 
-mm_page_t free_page[PAGE_NUM];
+mm_page_t free_page[FREE_PAGE_NUM];
+mm_page_t free_disk[FREE_DISK_NUM];
 
 LIST_HEAD(free_mm_list);
+LIST_HEAD(free_disk_list);
 
 mm_page_t *allocPage()
 {
     // align PAGE_SIZE
-    list_node_t *free_mem_list = free_mm_list.prev;
+    list_node_t *free_mem_list;
+    // if there is no free page , swap from disk
+    if (list_empty(&free_mm_list)) return swap_out();
+    // alloc a new page
+    free_mem_list = free_mm_list.prev;
     list_del(free_mem_list);
     return list_to_mm(free_mem_list);
 }
@@ -119,18 +127,79 @@ void shm_page_dt(uintptr_t addr)
     // TODO [P4-task4] shm_page_dt:
 }
 
-void init_memory()
+
+mm_page_t * swap_out()
 {
-    for (int i = 0; i < PAGE_NUM; i++)
+    printk("swap out\n");
+    list_node_t *disk_list = free_disk_list.prev;
+    list_del(disk_list);
+    mm_page_t *free_disk = list_to_mm(disk_list);
+    // FIFO and RANDOM Alogrithm
+    for (int i=1;i<NUM_MAX_TASK;i++)
     {
-        uint64_t addr = FREEMEM_KERNEL + i * NORMAL_PAGE_SIZE;
-        free_page[i].kva = addr;
-        free_page[i].page_type = PAGE_MEM;
-        list_add(&free_mm_list, &free_page[i].list);
+        if (pcb[i].is_used)
+        {
+            list_node_t *temp_list = pcb[i].mm_list.prev; // we don't swap pg_dir
+            temp_list = temp_list->prev;  // we don't swap stack
+            if (temp_list->prev != &pcb[i].mm_list)
+            {
+                // we decided to swap temp_list->prev
+                temp_list = temp_list->prev;
+                list_del(temp_list);
+                list_add(&pcb[i].mm_list,disk_list);
+                // copy va for swap in
+                mm_page_t *temp_mm = list_to_mm(temp_list);
+                free_disk->va = temp_mm->va;
+                sd_write(kva2pa(temp_mm->kva),BLOCK_NUM,free_disk->block_id);
+                return temp_mm;
+            }
+        }
     }
+    // FIXME: we should think if their is no free_disk_page or no page to swap out
+}
+
+void swap_in(mm_page_t *disk_page)
+{
+    printk("swap in\n");
+    int cpu_id = get_current_cpu_id();
+    mm_page_t *free_page = allocPage();
+    list_del(&disk_page->list);
+    list_add(&free_disk_list,&disk_page->list);
+    list_add(&current_running[cpu_id]->mm_list,&free_page->list);
+    free_page->va = disk_page->va;
+    sd_read(kva2pa(free_page->kva),BLOCK_NUM,disk_page->block_id);
 }
 
 mm_page_t *list_to_mm(list_node_t *list)
 {
     return (mm_page_t *)((uint64_t)list - sizeof(uintptr_t));
+}
+
+void init_memory()
+{
+    for (uint32_t i = 0; i < FREE_PAGE_NUM; i++)
+    {
+        uint64_t addr = FREEMEM_KERNEL + i * NORMAL_PAGE_SIZE;
+        free_page[i].page_type = PAGE_MEM;
+        free_page[i].kva = addr;
+        list_add(&free_mm_list, &free_page[i].list);
+    }
+}
+
+void init_disk()
+{
+    uint32_t final_block_num;
+    for (uint32_t i = 0; i < NUM_MAX_TASK; i++)
+        if (tasks[i].entry_point==0)
+        {
+            final_block_num = (tasks[i-1].start_addr + tasks[i-1].filesz) / BLOCK_SIZE + 1;
+            break;
+        }
+    for (uint32_t i = 0; i < FREE_DISK_NUM; i++)
+    {
+        uint32_t block_id = final_block_num + i * BLOCK_NUM;
+        free_disk[i].page_type = PAGE_DISK;
+        free_disk[i].block_id = block_id;
+        list_add(&free_disk_list, &free_disk[i].list);
+    }
 }

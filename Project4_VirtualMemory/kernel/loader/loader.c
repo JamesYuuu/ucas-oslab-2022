@@ -1,10 +1,7 @@
 #include <os/task.h>
 #include <os/string.h>
-#include <os/kernel.h>
+#include <common.h>
 #include <type.h>
-
-#define BLOCK_SIZE 512
-#define BLOCK_NUM NORMAL_PAGE_SIZE / BLOCK_SIZE
 
 void load_task_img(int task_id, uintptr_t kva, uintptr_t prev_kva, int page_num)
 {
@@ -23,7 +20,7 @@ void load_task_img(int task_id, uintptr_t kva, uintptr_t prev_kva, int page_num)
     if ((int64_t)(page_num * NORMAL_PAGE_SIZE - offset) > (int64_t)filesz)
         return;
 
-    bios_sdread(kva2pa(kva), BLOCK_NUM, block_id);
+    sd_read(kva2pa(kva), BLOCK_NUM, block_id);
 
     if (page_num != 0)
         memcpy((void *)prev_kva + NORMAL_PAGE_SIZE - offset, (void *)kva, offset);

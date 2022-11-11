@@ -37,8 +37,12 @@
 #define PAGE_SIZE 4096 // 4K
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK + PAGE_SIZE * 3)
+
 #define FREEMEM_KERNEL_END 0xffffffc060000000
-#define PAGE_NUM (FREEMEM_KERNEL_END-FREEMEM_KERNEL)/NORMAL_PAGE_SIZE
+#define FREE_PAGE_NUM 40//(FREEMEM_KERNEL_END-FREEMEM_KERNEL) / NORMAL_PAGE_SIZE
+
+#define FREE_DISK_SIZE 1024 * 1024          // 1M swap space
+#define FREE_DISK_NUM (FREE_DISK_SIZE / NORMAL_PAGE_SIZE)
 
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
@@ -56,7 +60,7 @@ typedef struct mm_page{
     union
     {
         uintptr_t kva;
-        uint32_t block_num;
+        uint32_t block_id;
     };
 } mm_page_t;
 
@@ -87,5 +91,8 @@ void shm_page_dt(uintptr_t addr);
 extern void init_memory();
 
 extern mm_page_t* list_to_mm(list_node_t *list);
+
+extern mm_page_t *swap_out();
+extern void swap_in(mm_page_t *disk_page);
 
 #endif /* MM_H */

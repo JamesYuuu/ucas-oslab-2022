@@ -75,6 +75,17 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     int cpu_id = get_current_cpu_id();
+    list_node_t *temp_list = current_running[cpu_id]->mm_list.prev;
+    // check if stval is in disk
+    while (temp_list != &current_running[cpu_id]->mm_list)
+    {
+        mm_page_t *temp_mm = list_to_mm(temp_list);
+        if (temp_mm->page_type == PAGE_DISK && temp_mm->va<=stval && temp_mm->va>=stval+NORMAL_PAGE_SIZE)
+        {
+            swap_in(temp_mm);
+            return;
+        }
+    }
     alloc_page_helper(stval,current_running[cpu_id]);
     local_flush_tlb_all();
 }
