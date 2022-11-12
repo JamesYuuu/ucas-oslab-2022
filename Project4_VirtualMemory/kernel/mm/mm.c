@@ -130,13 +130,14 @@ void shm_page_dt(uintptr_t addr)
 mm_page_t * swap_out()
 {
     printl("swap out\n");
+    int cpu_id = get_current_cpu_id();
     list_node_t *disk_list = free_disk_list.prev;
     list_del(disk_list);
     mm_page_t *free_disk = list_to_mm(disk_list);
     // FIFO and RANDOM Alogrithm
     for (int i = 1;i < NUM_MAX_TASK; i++)
     {
-        if (pcb[i].is_used)
+        if (pcb[i].is_used && pcb[i].status != TASK_RUNNING && &pcb[i]!=current_running[cpu_id])
         {
             list_node_t *temp_list = pcb[i].mm_list.prev; // we don't swap pg_dir
             temp_list = temp_list->prev;  // we don't swap stack

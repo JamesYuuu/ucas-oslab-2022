@@ -143,6 +143,7 @@ static void init_pcb(void)
     pcb[0].mask = CORE_BOTH;
     // alloc page dir
     mm_page_t *page_dir = allocPage();
+    clear_pgdir(page_dir->kva);
     list_add(&pcb[0].mm_list,&page_dir->list);
     pcb[0].pgdir = page_dir->kva;
     // copy kernel page table to user page table

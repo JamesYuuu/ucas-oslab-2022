@@ -151,7 +151,7 @@ minicom:
 	sudo $(MINICOM) -D $(TTYUSB1)
 
 padding:
-	dd if=/dev/zero of=$(ELF_IMAGE) oflag=append conv=notrunc bs=512MB count=2
+	dd if=/dev/zero of=$(ELF_IMAGE) oflag=append conv=notrunc bs=64MB count=2
 
 stat:
 	stat $(ELF_IMAGE)

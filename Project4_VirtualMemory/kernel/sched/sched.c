@@ -175,6 +175,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
     mm_page_t *page_dir = allocPage();
     list_add(&pcb[freepcb].mm_list,&page_dir->list);
     pcb[freepcb].pgdir = page_dir->kva;
+    clear_pgdir(page_dir->kva);
     // copy kernel page table to user page table
     share_pgtable(pcb[freepcb].pgdir, PGDIR_KVA);
     // alloc user stack
