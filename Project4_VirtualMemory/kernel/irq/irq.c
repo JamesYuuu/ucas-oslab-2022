@@ -16,17 +16,19 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
-    uint64_t irq_type=scause & SCAUSE_IRQ_FLAG; 
-    uint64_t irq_code=scause & ~SCAUSE_IRQ_FLAG;
-    if (irq_type==0) exc_table[irq_code](regs,stval,scause);
-        else irq_table[irq_code](regs,stval,scause);
+    uint64_t irq_type = scause & SCAUSE_IRQ_FLAG;
+    uint64_t irq_code = scause & ~SCAUSE_IRQ_FLAG;
+    if (irq_type == 0)
+        exc_table[irq_code](regs, stval, scause);
+    else
+        irq_table[irq_code](regs, stval, scause);
 }
 
 void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p2-task4] clock interrupt handler.
     // Note: use bios_set_timer to reset the timer and remember to reschedule
-    set_timer(get_ticks()+TIMER_INTERVAL);
+    set_timer(get_ticks() + TIMER_INTERVAL);
     do_scheduler();
 }
 
@@ -36,14 +38,15 @@ void init_exception()
     /* NOTE: handle_syscall, handle_other, etc.*/
     for (int i=0;i<EXCC_COUNT;i++)
         exc_table[i]=(handler_t)handle_other;
-    exc_table[EXCC_SYSCALL]=(handler_t)handle_syscall;
-    exc_table[EXCC_LOAD_PAGE_FAULT]=(handler_t)handle_page_fault;
-    exc_table[EXCC_STORE_PAGE_FAULT]=(handler_t)handle_page_fault;
+    exc_table[EXCC_SYSCALL]          =(handler_t)handle_syscall;
+    exc_table[EXCC_LOAD_PAGE_FAULT]  =(handler_t)handle_page_fault;
+    exc_table[EXCC_STORE_PAGE_FAULT] =(handler_t)handle_page_fault;
+    exc_table[EXCC_INST_PAGE_FAULT]  = (handler_t)handle_page_fault;
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
-    for (int i=0;i<IRQC_COUNT;i++)
-        irq_table[i]=(handler_t)handle_other;
-    irq_table[IRQC_S_TIMER]=(handler_t)handle_irq_timer;
+    for (int i = 0; i < IRQC_COUNT; i++)
+        irq_table[i] = (handler_t)handle_other;
+    irq_table[IRQC_S_TIMER] = (handler_t)handle_irq_timer;
     /* TODO: [p2-task3] set up the entrypoint of exceptions */
     setup_exception();
 }
@@ -80,12 +83,14 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
     while (temp_list != &current_running[cpu_id]->mm_list)
     {
         mm_page_t *temp_mm = list_to_mm(temp_list);
-        if (temp_mm->page_type == PAGE_DISK && temp_mm->va<=stval && temp_mm->va>=stval+NORMAL_PAGE_SIZE)
+        if (temp_mm->page_type == PAGE_DISK && temp_mm->va <= stval && temp_mm->va + NORMAL_PAGE_SIZE >= stval)
         {
             swap_in(temp_mm);
+            local_flush_tlb_all();
             return;
         }
+        temp_list = temp_list->prev;
     }
-    alloc_page_helper(stval,current_running[cpu_id]);
+    alloc_page_helper(stval, current_running[cpu_id]);
     local_flush_tlb_all();
 }

@@ -156,7 +156,10 @@ padding:
 stat:
 	stat $(ELF_IMAGE)
 
-.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom padding stat
+tail:
+	tail -f ~/OSLab-RISC-V/oslab-log.txt
+
+.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom padding stat tail
 
 # -----------------------------------------------------------------------
 # UCAS-OS Rules
