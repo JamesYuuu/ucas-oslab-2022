@@ -52,14 +52,6 @@ void freePage(list_node_t *mm_list)
         mm_page_t *temp_mm = list_to_mm(temp_list);
         if (temp_mm->page_type == PAGE_MEM) list_add(&free_mm_list, temp_list);
             else list_add(&free_disk_list, temp_list);
-        uintptr_t va = temp_mm->va;
-        // set pgdir to invalid
-        uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
-        uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
-        uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
-        PTE *pmd = (PTE *)pa2kva(get_pa(pgdir[vpn2]));
-        PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));
-        del_attribute(&pte[vpn0], _PAGE_PRESENT);
     }
 }
 
@@ -95,6 +87,7 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb)
     if (pg_base[vpn2] == 0)
     {
         mm_page_t *free_page_table = allocPage();
+        list_add(&pcb->mm_list, &free_page_table->list);
         set_pfn(&pg_base[vpn2], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
         clear_pgdir(pa2kva(get_pa(pg_base[vpn2])));
     }
@@ -104,6 +97,7 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb)
     if (pmd[vpn1] == 0)
     {
         mm_page_t *free_page_table = allocPage();
+        list_add(&pcb->mm_list, &free_page_table->list);
         set_pfn(&pmd[vpn1], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
         clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
     }
