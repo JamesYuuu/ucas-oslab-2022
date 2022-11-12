@@ -62,4 +62,8 @@ pid_t sys_taskset_p(pid_t pid , int mask);
 void* sys_shmpageget(int key);
 void sys_shmpagedt(void *addr);
 
+// add pthread
+void sys_pthread_create(pthread_t *thread, void (*start_routine)(void*), void *arg);
+int sys_pthread_join(pthread_t thread);
+
 #endif

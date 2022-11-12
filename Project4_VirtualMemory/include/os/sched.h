@@ -35,6 +35,7 @@
 
 #define NUM_MAX_TASK 16
 #define NUM_MAX_THREAD 4
+#define NUM_MAX_THREAD 16
 
 #define ARG_MAX 10
 #define ARG_LEN 20
@@ -65,6 +66,8 @@ typedef enum {
     TASK_READY,
     TASK_EXITED,
 } task_status_t;
+
+typedef pid_t pthread_t;
 
 typedef enum {
     CORE_0,
@@ -143,7 +146,6 @@ void do_block(list_node_t *, list_head *queue);
 void do_unblock(list_node_t *);
 
 pcb_t* list_to_pcb(list_node_t *list);
-void create_thread(long entry,long arg);
 
 /* TODO [P3-TASK1] exec exit kill waitpid ps*/
 #ifdef S_CORE
@@ -159,5 +161,10 @@ extern pid_t do_getpid();
 
 extern pid_t do_taskset(char* name , int argc, char *argv[] , int mask);
 extern pid_t do_taskset_p(pid_t pid , int mask);
+
+extern void pthread_create(pthread_t *thread, void (*start_routine)(void*), void *arg);
+extern int pthread_join(pthread_t thread);
+
+extern pcb_t tcb[NUM_MAX_THREAD];
 
 #endif

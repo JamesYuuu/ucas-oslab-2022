@@ -36,7 +36,8 @@
 #define SYSCALL_SHM_DT 57
 
 // add create_thread
-#define SYSCALL_CREATE_THREAD 60
+#define SYSCALL_PTHREAD_CREATE 10
+#define SYSCALL_PTHREAD_JOIN 11
 
 // add task_set
 #define SYSCALL_TASKSET 8

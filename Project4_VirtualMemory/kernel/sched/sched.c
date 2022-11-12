@@ -381,6 +381,49 @@ void do_process_show()
         }
         printk("\n");
     }
+    printk("[Thread Table]:\n");
+    for (int i = 0; i < NUM_MAX_THREAD; i++)
+    {
+        if (tcb[i].is_used == 0)
+            continue;
+        printk("[%d] TID : %d  ", i, tcb[i].pid);
+        switch (tcb[i].status)
+        {
+        case TASK_RUNNING:
+            printk("STATUS : RUNNING  ");
+            break;
+        case TASK_READY:
+            printk("STATUS : READY    ");
+            break;
+        case TASK_BLOCKED:
+            printk("STATUS : BLOCKED  ");
+            break;
+        default:
+            break;
+        }
+        switch (tcb[i].mask)
+        {
+        case CORE_0:
+            printk("MASK : 0x1  ");
+            break;
+        case CORE_1:
+            printk("MASK : 0x2  ");
+            break;
+        case CORE_BOTH:
+            printk("MASK : 0x3  ");
+            break;
+        default:
+            break;
+        }
+        if (tcb[i].status == TASK_RUNNING)
+        {
+            if (tcb[i].pid == current_running[0]->pid)
+                printk("RUNNING ON CORE 0");
+            else
+                printk("RUNNING ON CORE 1");
+        }
+        printk("\n");
+    }
 }
 
 pid_t do_getpid()

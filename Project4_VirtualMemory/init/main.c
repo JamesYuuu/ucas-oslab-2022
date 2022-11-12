@@ -220,7 +220,13 @@ static void init_syscall(void)
     syscall[SYSCALL_MBOX_RECV]  = (long (*)())do_mbox_recv;
 
     // syscalls for create_thread
-    syscall[SYSCALL_CREATE_THREAD] = (long (*)())create_thread;
+    syscall[SYSCALL_PTHREAD_CREATE] = (long (*)())pthread_create;
+    syscall[SYSCALL_PTHREAD_JOIN]   = (long (*)())pthread_join;
+
+    // syscalls for shared memory
+    syscall[SYSCALL_SHM_GET] = (long (*)())shm_page_get;
+    syscall[SYSCALL_SHM_DT]  = (long (*)())shm_page_dt;
+
 }
 
 void cancel_mapping()

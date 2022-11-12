@@ -90,12 +90,6 @@ void sys_sleep(uint32_t time)
     invoke_syscall(SYSCALL_SLEEP,(long)time,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
-// add create_thread
-void sys_create_thread(void *entry, void *arg)
-{
-    invoke_syscall(SYSCALL_CREATE_THREAD,(long)entry,(long)arg,IGNORE,IGNORE,IGNORE);
-}
-
 // S-core
 // pid_t  sys_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 // {
@@ -223,11 +217,13 @@ int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 void* sys_shmpageget(int key)
 {
     /* TODO: [p4-task5] call invoke_syscall to implement sys_shmpageget */
+    return (void*)invoke_syscall(SYSCALL_SHM_GET,(long)key,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 void sys_shmpagedt(void *addr)
 {
     /* TODO: [p4-task5] call invoke_syscall to implement sys_shmpagedt */
+    invoke_syscall(SYSCALL_SHM_DT,(long)addr,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 // add sys_taskset
@@ -239,4 +235,15 @@ pid_t sys_taskset_p(pid_t pid , int mask)
 pid_t sys_taskset(char* name , int argc, char *argv[] , int mask)
 {
     return invoke_syscall(SYSCALL_TASKSET,(long)name,(long)argc,(long)argv,(long)mask,IGNORE);
+}
+
+// add pthread
+void sys_pthread_create(pthread_t *thread, void (*start_routine)(void*), void *arg)
+{
+    invoke_syscall(SYSCALL_PTHREAD_CREATE,(long)thread,(long)start_routine,(long)arg,IGNORE,IGNORE);
+}
+
+int sys_pthread_join(pthread_t thread)
+{
+    return invoke_syscall(SYSCALL_PTHREAD_JOIN,(long)thread,IGNORE,IGNORE,IGNORE,IGNORE);
 }
