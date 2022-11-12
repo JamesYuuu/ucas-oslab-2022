@@ -5,9 +5,8 @@
 #define LEN 5
 int main(int argc, char* argv[])
 {
-    sys_clear(0);
     sys_move_cursor(0, 0);
-    printf("[TASK] Starting test swap system");
+    printf("> [TASK] Starting test swap system, please checkout oslab-log.txt for more info.");
     for (int i=1;i<=10;i++)
     {
         char print_location[LEN];
