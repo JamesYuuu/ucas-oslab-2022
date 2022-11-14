@@ -45,6 +45,8 @@
 #define FREE_DISK_SIZE 1024 * 1024 * 128            // 128M swap space
 #define FREE_DISK_NUM (FREE_DISK_SIZE / NORMAL_PAGE_SIZE)
 
+#define SHARED_PAGE_NUM 16
+
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
@@ -64,6 +66,14 @@ typedef struct mm_page{
         uint32_t block_id;
     };
 } mm_page_t;
+
+typedef struct shared_page{
+    int count;
+    uintptr_t va;
+    uintptr_t kva;
+    int key;
+    int is_used;
+} shared_page_t;
 
 extern mm_page_t* allocPage();
 // TODO [P4-task1] */

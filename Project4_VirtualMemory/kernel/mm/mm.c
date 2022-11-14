@@ -9,6 +9,7 @@ static ptr_t kernMemCurr = FREEMEM_KERNEL;
 
 mm_page_t free_page[FREE_PAGE_NUM];
 mm_page_t free_disk[FREE_DISK_NUM];
+shared_page_t shared_page[SHARED_PAGE_NUM];
 
 LIST_HEAD(free_mm_list);
 LIST_HEAD(free_disk_list);
@@ -87,7 +88,7 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb)
     if (pg_base[vpn2] == 0)
     {
         mm_page_t *free_page_table = allocPage();
-        list_add(&pcb->mm_list, &free_page_table->list);
+        // list_add(&pcb->mm_list, &free_page_table->list);
         set_pfn(&pg_base[vpn2], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
         clear_pgdir(pa2kva(get_pa(pg_base[vpn2])));
     }
@@ -97,7 +98,7 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb)
     if (pmd[vpn1] == 0)
     {
         mm_page_t *free_page_table = allocPage();
-        list_add(&pcb->mm_list, &free_page_table->list);
+        // list_add(&pcb->mm_list, &free_page_table->list);
         set_pfn(&pmd[vpn1], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
         clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
     }
@@ -133,7 +134,7 @@ mm_page_t * swap_out()
     while (1)
     {
         int i = (j++) % TASK_MAXNUM;
-        if (pcb[i].is_used && pcb[i].status != TASK_RUNNING && &pcb[i]!=current_running[cpu_id])
+        if (pcb[i].is_used && pcb[i].status != TASK_RUNNING)
         {
             list_node_t *temp_list = pcb[i].mm_list.prev; // we don't swap pg_dir
             temp_list = temp_list->prev;  // we don't swap stack

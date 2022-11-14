@@ -195,7 +195,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pcb[freepcb].user_sp = pcb[freepcb].user_stack_base;
     pcb[freepcb].status = TASK_READY;
     pcb[freepcb].cursor_x = pcb[freepcb].cursor_y = 0;
-    pcb[freepcb].thread_num = -1;
+    pcb[freepcb].thread_num = 0;
     list_add(&ready_queue, &pcb[freepcb].list);
     // temporarily copy argv to kernel 
     char argv_buff[ARG_MAX][ARG_LEN];
