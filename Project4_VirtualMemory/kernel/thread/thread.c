@@ -22,13 +22,16 @@ void pthread_create(pthread_t *thread, void (*start_routine)(void *), void *arg)
         }
     }
     if (free_tcb == NUM_MAX_THREAD)
-        return 0;
+    {
+        *thread = -1;
+        return;
+    }
     // set father thread
     current_running[cpu_id]->son[current_running[cpu_id]->thread_num] = &tcb[free_tcb];
     current_running[cpu_id]->thread_num++;
 
-    tcb[free_tcb].kernel_stack_base = allocPage()->kva;
-    tcb[free_tcb].user_stack_base = 0xf00020000ul;
+    tcb[free_tcb].kernel_stack_base = allocPage()->kva + PAGE_SIZE;
+    tcb[free_tcb].user_stack_base = current_running[cpu_id]->user_stack_base + PAGE_SIZE * current_running[cpu_id]->thread_num;
     list_init(&tcb[free_tcb].mm_list);
     list_init(&tcb[free_tcb].wait_list);
 
@@ -52,7 +55,7 @@ void pthread_create(pthread_t *thread, void (*start_routine)(void *), void *arg)
     // init regs_context_t by copying from father pcb;
     regs_context_t *pt_regs =
         (regs_context_t *)(tcb[free_tcb].kernel_stack_base - sizeof(regs_context_t));
-    for (int i = 0; i < 31; i++)
+    for (int i = 0; i < 32; i++)
         pt_regs->regs[i] = 0;
 
     // init some special regs

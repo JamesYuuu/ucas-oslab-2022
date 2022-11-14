@@ -128,7 +128,7 @@ static void init_pcb(void)
     // Note that tasks[0] is shell and we only need to load shell
     for (int i = 0; i < TASK_MAXNUM; i++)
     {
-        pcb[i].kernel_stack_base = allocPage()->kva;
+        pcb[i].kernel_stack_base = allocPage()->kva + PAGE_SIZE;
         pcb[i].user_stack_base = (ptr_t)USER_STACK_ADDR;
         list_init(&pcb[i].wait_list);
         list_init(&pcb[i].mm_list);
