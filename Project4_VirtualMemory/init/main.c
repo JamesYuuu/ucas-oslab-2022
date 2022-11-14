@@ -145,6 +145,7 @@ static void init_pcb(void)
     mm_page_t *page_dir = allocPage();
     clear_pgdir(page_dir->kva);
     list_add(&pcb[0].mm_list,&page_dir->list);
+    page_dir->fixed = 1;
     pcb[0].pgdir = page_dir->kva;
     // copy kernel page table to user page table
     share_pgtable(pcb[0].pgdir, PGDIR_KVA);

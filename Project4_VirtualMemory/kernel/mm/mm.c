@@ -88,7 +88,8 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb)
     if (pg_base[vpn2] == 0)
     {
         mm_page_t *free_page_table = allocPage();
-        // list_add(&pcb->mm_list, &free_page_table->list);
+        free_page_table->fixed = 1;
+        list_add(&pcb->mm_list, &free_page_table->list);
         set_pfn(&pg_base[vpn2], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
         clear_pgdir(pa2kva(get_pa(pg_base[vpn2])));
     }
@@ -98,7 +99,8 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb)
     if (pmd[vpn1] == 0)
     {
         mm_page_t *free_page_table = allocPage();
-        // list_add(&pcb->mm_list, &free_page_table->list);
+        free_page_table->fixed = 1;
+        list_add(&pcb->mm_list, &free_page_table->list);
         set_pfn(&pmd[vpn1], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
         clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
     }
@@ -143,7 +145,7 @@ mm_page_t * swap_out()
                 // we make sure we don't swap disk_page
                 temp_list = temp_list->prev;
                 mm_page_t *temp_mm = list_to_mm(temp_list);
-                if (temp_mm->page_type == PAGE_DISK) continue;
+                if (temp_mm->page_type == PAGE_DISK || temp_mm->fixed == 0) continue;
                 // we decided to swap temp_list->prev
                 list_del(temp_list);
                 list_add(&pcb[i].mm_list,disk_list);

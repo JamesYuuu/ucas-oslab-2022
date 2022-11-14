@@ -60,6 +60,7 @@ typedef struct mm_page{
     uintptr_t va;
     list_head list;
     page_type_t page_type;
+    int fixed;
     union
     {
         uintptr_t kva;
