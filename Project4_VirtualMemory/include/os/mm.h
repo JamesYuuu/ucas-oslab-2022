@@ -68,12 +68,17 @@ typedef struct mm_page{
     };
 } mm_page_t;
 
+typedef struct shared_pair_t{
+    uintptr_t va;
+    uintptr_t pid;
+} shared_pair_t;
 typedef struct shared_page{
     int count;
-    uintptr_t va;
     uintptr_t kva;
+    shared_pair_t pair[NUM_MAX_TASK];
     int key;
     int is_used;
+    list_head mm_list;
 } shared_page_t;
 
 extern mm_page_t* allocPage();
@@ -101,6 +106,7 @@ extern uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb);
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
+extern uintptr_t get_available_va(pcb_t *pcb);
 
 extern void init_memory();
 
@@ -108,5 +114,7 @@ extern mm_page_t* list_to_mm(list_node_t *list);
 
 extern mm_page_t *swap_out();
 extern void swap_in(mm_page_t *disk_page);
+
+extern void set_mapping(uintptr_t va, uintptr_t kva, pcb_t *pcb);
 
 #endif /* MM_H */

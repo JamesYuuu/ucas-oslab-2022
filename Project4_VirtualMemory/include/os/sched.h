@@ -34,7 +34,6 @@
 #include <os/smp.h>
 
 #define NUM_MAX_TASK 16
-#define NUM_MAX_THREAD 4
 #define NUM_MAX_THREAD 16
 
 #define ARG_MAX 10

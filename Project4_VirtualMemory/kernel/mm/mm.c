@@ -113,16 +113,104 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb)
     return free_page->kva;
 }
 
+uintptr_t get_available_va(pcb_t *pcb)
+{
+    list_node_t *temp_list = pcb->mm_list.prev;
+    uintptr_t max_va = 0;
+    while (temp_list!=&pcb->mm_list)
+    {
+        mm_page_t *temp_mm = list_to_mm(temp_list);
+        if (temp_mm->va>max_va && temp_mm->fixed == 0) max_va = temp_mm->va;
+        temp_list = temp_list->prev;
+    }
+    return max_va + PAGE_SIZE;
+}
+
 uintptr_t shm_page_get(int key)
 {
     // TODO [P4-task4] shm_page_get:
+    int cpu_id = get_current_cpu_id();
+    uintptr_t va = get_available_va(current_running[cpu_id]);
+    int index = -1;
+    for (int i = 0; i < SHARED_PAGE_NUM; i++)
+    {
+        if (shared_page[i].key == key)
+        {
+            index = i;
+            break;
+        }
+    }
+    if (index != -1)       // there is already allocated shared page table
+    {
+        shared_page[index].pair[shared_page[index].count].va = va;
+        shared_page[index].pair[shared_page[index].count].pid = current_running[cpu_id]->pid;
+        shared_page[index].count++;
+        set_mapping(va, shared_page[index].kva ,current_running[cpu_id]);
+        local_flush_tlb_all();
+        return va;
+    }
+
+    for (int i = 0; i < SHARED_PAGE_NUM; i++)
+    {
+        if (shared_page[i].is_used == 0)
+        {
+            index = i;
+            break;
+        }
+    }
+    if (index == -1) return 0; 
+    // allocate a new shared page table
+    list_init(&shared_page[index].mm_list);
+    mm_page_t *free_page = allocPage();
+    shared_page[index].key = key;
+    shared_page[index].is_used = 1;
+    shared_page[index].kva = free_page->kva;
+    shared_page[index].count = 1;
+    list_add(&shared_page[index].mm_list, &free_page->list);
+    shared_page[index].pair[0].va = va;
+    shared_page[index].pair[0].pid = current_running[cpu_id]->pid;
+    set_mapping(va, shared_page[index].kva ,current_running[cpu_id]);
+    local_flush_tlb_all();
+    return va;
 }
 
 void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
+    int cpu_id = get_current_cpu_id();
+    for (int i = 0; i < SHARED_PAGE_NUM; i++)
+    {
+        if (shared_page[i].is_used == 0) continue;
+        for (int j = 0; j < shared_page[i].count; j++)
+        {
+            if (shared_page[i].pair[j].va == addr && shared_page[i].pair[j].pid == current_running[cpu_id]->pid)
+            {
+                uintptr_t va = shared_page[i].pair[j].va;
+                PTE* pg_base = (PTE*)current_running[cpu_id]->pgdir;
+                shared_page[i].pair[j].va = shared_page[i].pair[shared_page[i].count - 1].va;
+                shared_page[i].pair[j].pid = shared_page[i].pair[shared_page[i].count - 1].pid;
+                shared_page[i].count--;
+                // set pg_dir to invalid
+                uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
+                uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
+                uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;      
+                PTE *pmd = (PTE *)pa2kva(get_pa(pg_base[vpn2]));          
+                PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));
+                del_attribute(&pte[vpn0], _PAGE_PRESENT);   
+                // check if shared_page is empty
+                if (shared_page[i].count == 0)
+                {
+                    shared_page[i].is_used = 0;
+                    list_node_t* temp_node = shared_page[i].mm_list.prev;
+                    list_del(temp_node);
+                    list_add(&free_mm_list, temp_node);
+                }    
+                local_flush_tlb_all();         
+                return;
+            }
+        }
+    }
 }
-
 
 mm_page_t * swap_out()
 {
@@ -169,7 +257,7 @@ mm_page_t * swap_out()
         if (j == start_id) break;
     }
     // FIXME: we should think if their is no free_disk_page or no page to swap out
-    printl("> [Error] No page to swap out because all pages all PTE!\n");
+    printl("> [Error] No page to swap out because all pages are page table!\n");
     while (1);
 }
 
@@ -217,4 +305,42 @@ void init_disk()
         free_disk[i].block_id = block_id;
         list_add(&free_disk_list, &free_disk[i].list);
     }
+}
+
+void set_mapping(uintptr_t va, uintptr_t kva, pcb_t *pcb)
+{
+    // TODO [P4-task1] alloc_page_helper:
+
+    PTE *pg_base = (PTE *)pcb->pgdir;
+
+    uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
+    uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
+    uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
+
+    if (pg_base[vpn2] == 0)
+    {
+        mm_page_t *free_page_table = allocPage();
+        free_page_table->fixed = 1;
+        list_add(&pcb->mm_list, &free_page_table->list);
+        set_pfn(&pg_base[vpn2], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
+        clear_pgdir(pa2kva(get_pa(pg_base[vpn2])));
+    }
+    set_attribute(&pg_base[vpn2], _PAGE_PRESENT | _PAGE_USER);
+    PTE *pmd = (PTE *)pa2kva(get_pa(pg_base[vpn2]));
+
+    if (pmd[vpn1] == 0)
+    {
+        mm_page_t *free_page_table = allocPage();
+        free_page_table->fixed = 1;
+        list_add(&pcb->mm_list, &free_page_table->list);
+        set_pfn(&pmd[vpn1], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
+        clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
+    }
+    set_attribute(&pmd[vpn1], _PAGE_PRESENT | _PAGE_USER);
+    PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));
+
+    set_pfn(&pte[vpn0], kva2pa(kva) >> NORMAL_PAGE_SHIFT);
+    set_attribute(&pte[vpn0], _PAGE_PRESENT | _PAGE_USER | _PAGE_EXEC | _PAGE_WRITE | _PAGE_READ | _PAGE_ACCESSED | _PAGE_DIRTY);
+
+    return;
 }
