@@ -333,13 +333,10 @@ void reset_mapping(uintptr_t va, uintptr_t pgdir, uint64_t bits)
     set_attribute(&pte[vpn0], bits);
 }
 
-uintptr_t do_getpa(uintptr_t addr,int mode)
+uintptr_t do_getpa(uintptr_t addr)
 {
     int cpu_id = get_current_cpu_id();
-    if (mode == -1)
-        return kva2pa(get_kva_of(addr, current_running[cpu_id]->pgdir));
-    else
-        return kva2pa(get_kva_of(addr, snapshots[mode].pgdir));
+    return kva2pa(get_kva_of(addr, current_running[cpu_id]->pgdir));
 }
 
 int do_snapshot_shot(uintptr_t start_addr)
@@ -387,11 +384,8 @@ int do_snapshot_shot(uintptr_t start_addr)
 void do_snapshot_restore(int index)
 {
     int cpu_id = get_current_cpu_id();
-    unsigned long ppn;
-    if (index == -1)
-        ppn = kva2pa(current_running[cpu_id]->pgdir) >> NORMAL_PAGE_SHIFT;
-    else
-        ppn = kva2pa(snapshots[index].pgdir) >> NORMAL_PAGE_SHIFT;
+    current_running[cpu_id]->pgdir = snapshots[index].pgdir;
+    unsigned long ppn = kva2pa(current_running[cpu_id]->pgdir) >> NORMAL_PAGE_SHIFT;
     set_satp(SATP_MODE_SV39, current_running[cpu_id]->pid, ppn);
     local_flush_tlb_all();
 }

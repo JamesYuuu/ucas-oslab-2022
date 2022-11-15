@@ -270,7 +270,7 @@ int main(void)
 
     // FIXME: delete after double core
     // Cancel previous mapping for boot.c
-    cancel_mapping();
+    // cancel_mapping();
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
@@ -321,7 +321,7 @@ int main(void)
     smp_init();
 
     // wakeup_other_hart()
-    // wakeup_other_hart();
+    wakeup_other_hart();
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's

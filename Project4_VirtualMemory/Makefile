@@ -117,7 +117,7 @@ ELF_CREATEIMAGE = $(DIR_BUILD)/$(notdir $(SRC_CREATEIMAGE:.c=))
 # Top-level Rules
 # -----------------------------------------------------------------------
 
-all: dirs elf image asm padding# floppy
+all: dirs elf image asm # floppy
 
 dirs:
 	@mkdir -p $(DIR_BUILD)

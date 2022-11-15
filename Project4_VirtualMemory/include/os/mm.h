@@ -129,7 +129,7 @@ extern void reset_mapping(uintptr_t va, uintptr_t pgdir, uint64_t bits);
 
 extern int do_snapshot_shot(uintptr_t start_addr);
 extern void do_snapshot_restore(int index);
-extern uintptr_t do_getpa(uintptr_t va,int mode);
+extern uintptr_t do_getpa(uintptr_t va);
 
 extern snapshot_t snapshots[SNAPSHOT_NUM];
 

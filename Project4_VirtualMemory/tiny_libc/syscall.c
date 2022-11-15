@@ -260,7 +260,7 @@ void sys_snapshot_restore(int index)
     invoke_syscall(SYSCALL_SNAPSHOT_RESTORE,(long)index,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
-uintptr_t sys_getpa(uintptr_t va , int mode)
+uintptr_t sys_getpa(uintptr_t va)
 {
-    return invoke_syscall(SYSCALL_GETPA,(long)va,(long)mode,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_GETPA,(long)va,IGNORE,IGNORE,IGNORE,IGNORE);
 }
