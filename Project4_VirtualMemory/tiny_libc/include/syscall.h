@@ -43,4 +43,9 @@
 #define SYSCALL_TASKSET 8
 #define SYSCALL_TASKSET_P 9
 
+// add snapshot support
+#define SYSCALL_SNAPSHOT_SHOT 12
+#define SYSCALL_SNAPSHOT_RESTORE 13
+#define SYSCALL_GETPA 14
+
 #endif

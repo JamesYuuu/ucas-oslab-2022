@@ -117,4 +117,8 @@ extern void swap_in(mm_page_t *disk_page);
 
 extern void set_mapping(uintptr_t va, uintptr_t kva, pcb_t *pcb);
 
+extern int do_snapshot_shot(uintptr_t start_addr);
+extern void do_snapshot_restore(int index);
+extern uintptr_t do_getpa(uintptr_t va);
+
 #endif /* MM_H */

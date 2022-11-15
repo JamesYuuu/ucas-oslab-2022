@@ -228,6 +228,11 @@ static void init_syscall(void)
     syscall[SYSCALL_SHM_GET] = (long (*)())shm_page_get;
     syscall[SYSCALL_SHM_DT]  = (long (*)())shm_page_dt;
 
+    // syscalls for snapshot
+    syscall[SYSCALL_SNAPSHOT_SHOT]    = (long (*)())do_snapshot_shot;
+    syscall[SYSCALL_SNAPSHOT_RESTORE] = (long (*)())do_snapshot_restore;
+    syscall[SYSCALL_GETPA]            = (long (*)())do_getpa;
+
 }
 
 void cancel_mapping()

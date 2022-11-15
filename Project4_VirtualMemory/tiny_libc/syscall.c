@@ -247,3 +247,20 @@ int sys_pthread_join(pthread_t thread)
 {
     return invoke_syscall(SYSCALL_PTHREAD_JOIN,(long)thread,IGNORE,IGNORE,IGNORE,IGNORE);
 }
+
+
+// add snapshot support
+int sys_snapshot_shot(uintptr_t start_addr)
+{
+    return invoke_syscall(SYSCALL_SNAPSHOT_SHOT,(long)start_addr,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+void sys_snapshot_restore(int index)
+{
+    invoke_syscall(SYSCALL_SNAPSHOT_RESTORE,(long)index,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+uintptr_t sys_getpa(uintptr_t va)
+{
+    return invoke_syscall(SYSCALL_GETPA,(long)va,IGNORE,IGNORE,IGNORE,IGNORE);
+}

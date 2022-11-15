@@ -14,5 +14,5 @@ int main(int argc, char* argv[])
         char *argv[2] = {"lock",print_location};
         sys_exec(argv[0],2,argv);
     }
-    return;
+    return 0;
 }

@@ -344,3 +344,19 @@ void set_mapping(uintptr_t va, uintptr_t kva, pcb_t *pcb)
 
     return;
 }
+
+uintptr_t do_getpa(uintptr_t addr)
+{
+    int cpu_id = get_current_cpu_id();
+    return kva2pa(get_kva_of(addr, current_running[cpu_id]->pgdir));
+}
+
+int do_snapshot_shot(uintptr_t start_addr)
+{
+    
+}
+
+void do_snapshot_restore(int index)
+{
+
+}
