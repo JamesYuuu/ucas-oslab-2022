@@ -249,7 +249,7 @@ mm_page_t * swap_out()
                 PTE *pmd = (PTE *)pa2kva(get_pa(pg_base[vpn2]));          
                 PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));
                 del_attribute(&pte[vpn0], _PAGE_PRESENT);
-                printl("> [Info] Swap out kva 0x%lx from pid(%d) into block %d\n",temp_mm->kva,pcb[i].pid,free_disk->block_id);
+                printl("> [Info] Swap out va 0x%x from pid(%d) into block %d\n",temp_mm->va,pcb[i].pid,free_disk->block_id);
                 j = i;
                 return temp_mm;
             }
@@ -270,7 +270,7 @@ void swap_in(mm_page_t *disk_page)
     uintptr_t va = disk_page->va;
     uintptr_t kva = alloc_page_helper(va,current_running[cpu_id]);
     sd_read(kva2pa(kva),BLOCK_NUM,disk_page->block_id);
-    printl("> [Info] Swap in block %d for pid(%d) into kva 0x%lx\n",disk_page->block_id,current_running[cpu_id]->pid,kva);
+    printl("> [Info] Swap in block %d into va 0x%x for pid(%d) \n",disk_page->block_id,va,current_running[cpu_id]->pid);
 }
 
 mm_page_t *list_to_mm(list_node_t *list)
