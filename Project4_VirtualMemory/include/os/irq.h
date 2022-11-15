@@ -81,4 +81,6 @@ extern void disable_interrupt(void);
 extern void enable_preempt(void);
 extern void disable_preempt(void);
 
+extern void copy_on_write(uint64_t stval,pcb_t *pcb);
+
 #endif

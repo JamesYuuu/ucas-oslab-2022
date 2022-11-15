@@ -46,6 +46,7 @@
 #define FREE_DISK_NUM (FREE_DISK_SIZE / NORMAL_PAGE_SIZE)
 
 #define SHARED_PAGE_NUM 16
+#define SNAPSHOT_NUM 16
 
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
@@ -80,6 +81,13 @@ typedef struct shared_page{
     int is_used;
     list_head mm_list;
 } shared_page_t;
+
+typedef struct snapshot{
+    int is_used;
+    uintptr_t pgdir;
+    list_head mm_list;
+    pid_t pid;
+} snapshot_t;
 
 extern mm_page_t* allocPage();
 // TODO [P4-task1] */
@@ -116,6 +124,7 @@ extern mm_page_t *swap_out();
 extern void swap_in(mm_page_t *disk_page);
 
 extern void set_mapping(uintptr_t va, uintptr_t kva, pcb_t *pcb);
+extern void del_mapping(uintptr_t va, uintptr_t pgdir,uint64_t bits);
 
 extern int do_snapshot_shot(uintptr_t start_addr);
 extern void do_snapshot_restore(int index);

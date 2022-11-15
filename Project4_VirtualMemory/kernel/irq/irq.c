@@ -78,6 +78,8 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     int cpu_id = get_current_cpu_id();
+    if (current_running[cpu_id]->is_shot == 1) 
+        copy_on_write(stval,current_running[cpu_id]);
     list_node_t *temp_list = current_running[cpu_id]->mm_list.prev;
     // check if stval is in disk
     while (temp_list != &current_running[cpu_id]->mm_list)
@@ -91,6 +93,12 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
         }
         temp_list = temp_list->prev;
     }
+    // allocate a new page
     alloc_page_helper(stval, current_running[cpu_id]);
     local_flush_tlb_all();
+}
+
+void copy_on_write(uint64_t stval,pcb_t *pcb)
+{
+    
 }

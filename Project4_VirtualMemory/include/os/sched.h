@@ -117,8 +117,11 @@ typedef struct pcb
         struct pcb *son[NUM_MAX_THREAD];
     };
 
-    // [p3] add memory_list for recycle
+    // [p4] add memory_list for recycle
     list_head mm_list;
+
+    // [p4] add snapshot
+    int is_shot;
     
 } pcb_t;
 
