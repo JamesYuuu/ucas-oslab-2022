@@ -69,6 +69,6 @@ int sys_pthread_join(pthread_t thread);
 // add snapshot support
 int sys_snapshot_shot(uintptr_t start_addr);
 void sys_snapshot_restore(int index);
-uintptr_t sys_getpa(uintptr_t va);
+uintptr_t sys_getpa(uintptr_t va, int mode);
 
 #endif

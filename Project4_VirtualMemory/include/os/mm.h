@@ -129,8 +129,11 @@ extern void reset_mapping(uintptr_t va, uintptr_t pgdir, uint64_t bits);
 
 extern int do_snapshot_shot(uintptr_t start_addr);
 extern void do_snapshot_restore(int index);
-extern uintptr_t do_getpa(uintptr_t va);
+extern uintptr_t do_getpa(uintptr_t va,int mode);
 
 extern snapshot_t snapshots[SNAPSHOT_NUM];
+
+extern void set_mapping_snapshot(uintptr_t va, uintptr_t kva,  snapshot_t *snapshot);
+extern void set_new_page(uint64_t va, uintptr_t original_kva , snapshot_t *snapshot);
 
 #endif /* MM_H */

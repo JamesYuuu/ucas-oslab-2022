@@ -155,10 +155,9 @@ static inline uintptr_t get_kva_of(uintptr_t va, uintptr_t pgdir_va)
     uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
     uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
     uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
-    uint64_t offset = va & ((1lu << NORMAL_PAGE_SHIFT) - 1);
     PTE *pme = (PTE*) pa2kva(get_pa(((PTE *)pgdir_va)[vpn2]));
     PTE *pte = (PTE*) pa2kva(get_pa(pme[vpn1]));
-    return pa2kva(get_pa(pte[vpn0])) + offset;
+    return pa2kva(get_pa(pte[vpn0]));
 }
 
 #endif // PGTABLE_H

@@ -333,24 +333,18 @@ void reset_mapping(uintptr_t va, uintptr_t pgdir, uint64_t bits)
     set_attribute(&pte[vpn0], bits);
 }
 
-uintptr_t do_getpa(uintptr_t addr)
+uintptr_t do_getpa(uintptr_t addr,int mode)
 {
     int cpu_id = get_current_cpu_id();
-    return kva2pa(get_kva_of(addr, current_running[cpu_id]->pgdir));
+    if (mode == -1)
+        return kva2pa(get_kva_of(addr, current_running[cpu_id]->pgdir));
+    else
+        return kva2pa(get_kva_of(addr, snapshots[mode].pgdir));
 }
 
 int do_snapshot_shot(uintptr_t start_addr)
 {
-    // set all pages non-writeable
     int cpu_id = get_current_cpu_id();
-    list_node_t *temp_node = current_running[cpu_id]->mm_list.prev;
-    while (temp_node != &current_running[cpu_id]->mm_list)
-    {
-        mm_page_t *temp_mm = list_to_mm(temp_node);
-        if (temp_mm->fixed == 0 && temp_mm->va >= start_addr)
-            del_mapping(temp_mm->va, current_running[cpu_id]->pgdir, _PAGE_WRITE);
-        temp_node = temp_node->prev;
-    }
     // find a new snapshot
     int index = -1;
     for (int i = 0; i < SNAPSHOT_NUM; i++)
@@ -369,15 +363,80 @@ int do_snapshot_shot(uintptr_t start_addr)
     page_dir->fixed = 1;
     snapshots[index].pgdir = page_dir->kva;
     snapshots[index].pid = current_running[cpu_id]->pid;
-    share_pgtable(snapshots[index].pgdir, current_running[cpu_id]->pgdir);
+    snapshots[index].is_used = 1;
     current_running[cpu_id]->is_shot = 1;
+    share_pgtable(snapshots[index].pgdir,PGDIR_KVA);
+    // set all pages non-writeable and reset mapping
+    list_node_t *temp_node = current_running[cpu_id]->mm_list.prev;
+    while (temp_node != &current_running[cpu_id]->mm_list)
+    {
+        mm_page_t *temp_mm = list_to_mm(temp_node);
+        if (temp_mm->fixed == 1)
+        {
+            temp_node = temp_node->prev;
+            continue;
+        }
+        if (temp_mm->va != USER_STACK_ADDR - PAGE_SIZE && temp_mm->va >= start_addr)
+            del_mapping(temp_mm->va, current_running[cpu_id]->pgdir, _PAGE_WRITE);
+        set_mapping_snapshot(temp_mm->va, temp_mm->kva, &snapshots[index]);
+        temp_node = temp_node->prev;
+    }
     return index;
 }
 
 void do_snapshot_restore(int index)
 {
     int cpu_id = get_current_cpu_id();
-    unsigned long ppn = kva2pa(snapshots[index].pgdir) >> NORMAL_PAGE_SHIFT;
+    unsigned long ppn;
+    if (index == -1)
+        ppn = kva2pa(current_running[cpu_id]->pgdir) >> NORMAL_PAGE_SHIFT;
+    else
+        ppn = kva2pa(snapshots[index].pgdir) >> NORMAL_PAGE_SHIFT;
     set_satp(SATP_MODE_SV39, current_running[cpu_id]->pid, ppn);
     local_flush_tlb_all();
 }
+
+void set_mapping_snapshot(uintptr_t va, uintptr_t kva,  snapshot_t *snapshot)
+{
+    PTE *pg_base = (PTE *)snapshot->pgdir;
+
+    uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
+    uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
+    uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
+
+    if (pg_base[vpn2] == 0)
+    {
+        mm_page_t *free_page_table = allocPage();
+        free_page_table->fixed = 1;
+        list_add(&snapshot->mm_list, &free_page_table->list);
+        set_pfn(&pg_base[vpn2], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
+        clear_pgdir(pa2kva(get_pa(pg_base[vpn2])));
+    }
+    set_attribute(&pg_base[vpn2], _PAGE_PRESENT | _PAGE_USER);
+    PTE *pmd = (PTE *)pa2kva(get_pa(pg_base[vpn2]));
+
+    if (pmd[vpn1] == 0)
+    {
+        mm_page_t *free_page_table = allocPage();
+        free_page_table->fixed = 1;
+        list_add(&snapshot->mm_list, &free_page_table->list);
+        set_pfn(&pmd[vpn1], kva2pa(free_page_table->kva) >> NORMAL_PAGE_SHIFT);
+        clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
+    }
+    set_attribute(&pmd[vpn1], _PAGE_PRESENT | _PAGE_USER);
+    PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));
+
+    set_pfn(&pte[vpn0], kva2pa(kva) >> NORMAL_PAGE_SHIFT);
+    set_attribute(&pte[vpn0], _PAGE_PRESENT | _PAGE_USER | _PAGE_EXEC | _PAGE_WRITE | _PAGE_READ | _PAGE_ACCESSED | _PAGE_DIRTY);
+}
+
+void set_new_page(uint64_t va, uintptr_t original_kva , snapshot_t *snapshot)
+{
+    // allocate a new page and copy the original page
+    mm_page_t* free_page = allocPage();
+    free_page->va = va;
+    list_add(&snapshot->mm_list,&free_page->list);
+    memcpy((void *)free_page->kva, (void *)original_kva, NORMAL_PAGE_SIZE);
+    // set new mapping
+    set_mapping_snapshot(va,free_page->kva,snapshot);
+} 

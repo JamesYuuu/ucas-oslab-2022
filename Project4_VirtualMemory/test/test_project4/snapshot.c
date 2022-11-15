@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
         uintptr_t addr = BASE_TEST_ADDR + PAGE_SIZE * i;
         int val = rand() % BASE_TEST_NUMBER;
         *(int *)addr = val;
-        printf("0x%x:%d ",sys_getpa(addr),val);
+        printf("0x%x:%d ",sys_getpa(addr,-1),val);
     }
     printf("\n> [Info] Initialization finished and start testing snapshot!\n");
     for (int i = 0; i < BASE_TEST_NUM; i++)
@@ -38,8 +38,16 @@ int main(int argc, char *argv[])
         {
             uintptr_t addr = BASE_TEST_ADDR + PAGE_SIZE * j;
             int val = *(int *)addr;
-            printf("0x%x:%d ",sys_getpa(addr),val);
+            printf("0x%x:%d ",sys_getpa(addr,index[i]),val);
         }
+    }
+    sys_snapshot_restore(-1);
+    printf("\n> [Info] Final result...\n");
+    for (int i = 0; i < BASE_TEST_NUM; i++)
+    {
+        uintptr_t addr = BASE_TEST_ADDR + PAGE_SIZE * i;
+        int val = *(int *)addr;
+        printf("0x%x:%d ",sys_getpa(addr,-1),val);
     }
     return 0;
 }

@@ -114,8 +114,10 @@ void copy_on_write(uint64_t stval,pcb_t *pcb)
         if (snapshots[i].is_used == 0 || snapshots[i].pid != pcb->pid)
             continue;
         // snapshots already be copied
-        if (get_kva_of(stval,snapshots[i].pgdir)!=get_kva_of(stval,pcb->pgdir))
+        uintptr_t original_kva = get_kva_of(stval, pcb->pgdir);
+        if (get_kva_of(stval,snapshots[i].pgdir) != original_kva)
             continue;
         // copy the new page
+        set_new_page(stval,original_kva,&snapshots[i]);
     }
 }

@@ -31,7 +31,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define SHELL_BEGIN 20
+#define SHELL_BEGIN 25
 #define BUFFER_MAX 80
 #define ARG_MAX 10
 #define ARG_LEN 20
