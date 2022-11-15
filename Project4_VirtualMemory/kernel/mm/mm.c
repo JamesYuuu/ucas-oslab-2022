@@ -233,7 +233,7 @@ mm_page_t * swap_out()
                 // we make sure we don't swap disk_page
                 temp_list = temp_list->prev;
                 mm_page_t *temp_mm = list_to_mm(temp_list);
-                if (temp_mm->page_type == PAGE_DISK || temp_mm->fixed == 0) continue;
+                if (temp_mm->page_type == PAGE_DISK || temp_mm->fixed == 1) continue;
                 // we decided to swap temp_list->prev
                 list_del(temp_list);
                 list_add(&pcb[i].mm_list,disk_list);
@@ -270,7 +270,7 @@ void swap_in(mm_page_t *disk_page)
     uintptr_t va = disk_page->va;
     uintptr_t kva = alloc_page_helper(va,current_running[cpu_id]);
     sd_read(kva2pa(kva),BLOCK_NUM,disk_page->block_id);
-    printl("> [Info] Swap in block %d for pid(%d) into kva 0x%lx\n",free_disk->block_id,current_running[cpu_id]->pid,kva);
+    printl("> [Info] Swap in block %d for pid(%d) into kva 0x%lx\n",disk_page->block_id,current_running[cpu_id]->pid,kva);
 }
 
 mm_page_t *list_to_mm(list_node_t *list)
