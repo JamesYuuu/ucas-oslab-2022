@@ -322,6 +322,17 @@ void del_mapping(uintptr_t va, uintptr_t pgdir, uint64_t bits)
     del_attribute(&pte[vpn0], bits);
 }
 
+void reset_mapping(uintptr_t va, uintptr_t pgdir, uint64_t bits)
+{
+    PTE *pg_base = (PTE *)pgdir;
+    uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
+    uint64_t vpn1 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS)) & VPN_MASK;
+    uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) & VPN_MASK;
+    PTE *pmd = (PTE *)pa2kva(get_pa(pg_base[vpn2]));
+    PTE *pte = (PTE *)pa2kva(get_pa(pmd[vpn1]));
+    set_attribute(&pte[vpn0], bits);
+}
+
 uintptr_t do_getpa(uintptr_t addr)
 {
     int cpu_id = get_current_cpu_id();

@@ -78,18 +78,25 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     int cpu_id = get_current_cpu_id();
-    if (current_running[cpu_id]->is_shot == 1) 
-        copy_on_write(stval,current_running[cpu_id]);
     list_node_t *temp_list = current_running[cpu_id]->mm_list.prev;
     // check if stval is in disk
     while (temp_list != &current_running[cpu_id]->mm_list)
     {
         mm_page_t *temp_mm = list_to_mm(temp_list);
-        if (temp_mm->page_type == PAGE_DISK && temp_mm->va <= stval && temp_mm->va + NORMAL_PAGE_SIZE >= stval)
+        if (temp_mm->va <= stval && temp_mm->va + NORMAL_PAGE_SIZE >= stval)
         {
-            swap_in(temp_mm);
-            local_flush_tlb_all();
-            return;
+            if (temp_mm->page_type == PAGE_DISK)
+            {
+                swap_in(temp_mm);
+                local_flush_tlb_all();
+                return;
+            }
+            if (current_running[cpu_id]->is_shot == 1)
+            {
+                copy_on_write(stval,current_running[cpu_id]);
+                local_flush_tlb_all();
+                return;
+            }
         }
         temp_list = temp_list->prev;
     }
@@ -100,5 +107,15 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
 
 void copy_on_write(uint64_t stval,pcb_t *pcb)
 {
-    
+    reset_mapping(stval,pcb->pgdir,_PAGE_WRITE);
+    for (int i = 0; i < SNAPSHOT_NUM; i++)
+    {
+        // snapshots not used or not belongs to this pcb;
+        if (snapshots[i].is_used == 0 || snapshots[i].pid != pcb->pid)
+            continue;
+        // snapshots already be copied
+        if (get_kva_of(stval,snapshots[i].pgdir)!=get_kva_of(stval,pcb->pgdir))
+            continue;
+        // copy the new page
+    }
 }
