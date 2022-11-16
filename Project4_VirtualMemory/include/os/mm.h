@@ -39,8 +39,8 @@
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK + PAGE_SIZE * 3)
 
 #define FREEMEM_KERNEL_END 0xffffffc060000000
-#define FREE_PAGE_NUM 100    // used for testing swap system
-// #define FREE_PAGE_NUM (FREEMEM_KERNEL_END-FREEMEM_KERNEL) / NORMAL_PAGE_SIZE
+// #define FREE_PAGE_NUM 100    // used for testing swap system
+#define FREE_PAGE_NUM (FREEMEM_KERNEL_END-FREEMEM_KERNEL) / NORMAL_PAGE_SIZE
 
 #define FREE_DISK_SIZE 1024 * 1024 * 128            // 128M swap space
 #define FREE_DISK_NUM (FREE_DISK_SIZE / NORMAL_PAGE_SIZE)
