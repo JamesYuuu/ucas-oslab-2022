@@ -26,7 +26,7 @@ void pthread_create(pthread_t *thread, void (*start_routine)(void *), void *arg)
         *thread = -1;
         return;
     }
-    // set father thread
+    // set father process
     current_running[cpu_id]->son[current_running[cpu_id]->thread_num] = &tcb[free_tcb];
     current_running[cpu_id]->thread_num++;
 

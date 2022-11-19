@@ -225,8 +225,7 @@ mm_page_t *swap_out()
     }
     // FIXME: we should think if their is no free_disk_page or no page to swap out
     printl("> [Error] No page to swap out because all pages are page table!\n");
-    while (1)
-        ;
+    while (1);
 }
 
 void swap_in(mm_page_t *disk_page)

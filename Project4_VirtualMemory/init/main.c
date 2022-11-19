@@ -244,8 +244,7 @@ void cancel_mapping()
         uint64_t vpn2 = (va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) & VPN_MASK;
         del_attribute(&pg_dir[vpn2], _PAGE_PRESENT);
     }
-
-    set_satp(SATP_MODE_SV39, 0, PGDIR_PA >> NORMAL_PAGE_SHIFT);
+    
     local_flush_tlb_all();
 }
 
