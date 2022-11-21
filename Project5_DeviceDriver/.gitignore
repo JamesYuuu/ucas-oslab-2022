@@ -1,0 +1,6 @@
+.vscode
+build
+*.txt
+.history
+.gdbinit
+note.md
