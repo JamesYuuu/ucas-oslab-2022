@@ -36,6 +36,8 @@
 #include <os/string.h>
 #include <os/mm.h>
 #include <os/time.h>
+#include <os/smp.h>
+#include <os/net.h>
 #include <os/ioremap.h>
 #include <sys/syscall.h>
 #include <screen.h>
@@ -44,7 +46,6 @@
 #include <assert.h>
 #include <type.h>
 #include <csr.h>
-#include <os/smp.h>
 
 extern void ret_from_exception();
 
@@ -235,6 +236,9 @@ static void init_syscall(void)
     syscall[SYSCALL_SNAPSHOT_RESTORE] = (long (*)())do_snapshot_restore;
     syscall[SYSCALL_GETPA]            = (long (*)())do_getpa;
 
+    // syscalls for network
+    syscall[SYSCALL_NET_SEND] = (long (*)())do_net_send;
+    syscall[SYSCALL_NET_RECV] = (long (*)())do_net_recv;
 }
 
 void cancel_mapping()
@@ -271,7 +275,7 @@ int main(void)
 
     // FIXME: delete after double core
     // Cancel previous mapping for boot.c
-    // cancel_mapping();
+    cancel_mapping();
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
@@ -339,7 +343,7 @@ int main(void)
     smp_init();
 
     // wakeup_other_hart()
-    wakeup_other_hart();
+    // wakeup_other_hart();
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
