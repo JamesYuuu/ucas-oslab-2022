@@ -57,9 +57,8 @@ static void e1000_configure_tx(void)
     /* TODO: [p5-task1] Initialize tx descriptors */
     for (int i=0;i<TXDESCS;i++)
     {
-        tx_desc_array[i].addr   = kva2pa(tx_pkt_buffer[i]);
-        tx_desc_array[i].length = TX_PKT_SIZE;
-        tx_desc_array[i].cmd = E1000_TXD_CMD_RS & ~E1000_TXD_CMD_DEXT;
+        tx_desc_array[i].addr = kva2pa(tx_pkt_buffer[i]);
+        tx_desc_array[i].cmd  = E1000_TXD_CMD_RS & ~E1000_TXD_CMD_DEXT;
     }
     /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
     // note that our physical addr is 32bit
@@ -71,6 +70,8 @@ static void e1000_configure_tx(void)
     e1000_write_reg(e1000, E1000_TDT, 0);
     /* TODO: [p5-task1] Program the Transmit Control Register */
     e1000_write_reg(e1000, E1000_TCTL, E1000_TCTL_EN | E1000_TCTL_PSP | E1000_TCTL_CT | E1000_TCTL_COLD);
+
+    local_flush_dcache();
 }
 
 /**
@@ -115,8 +116,19 @@ void e1000_init(void)
 int e1000_transmit(void *txpacket, int length)
 {
     /* TODO: [p5-task1] Transmit one packet from txpacket */
+    local_flush_dcache();
 
-    return 0;
+    uint32_t index = e1000_read_reg(e1000, E1000_TDT);
+
+    memcpy(tx_pkt_buffer[index], txpacket, length);
+    tx_desc_array[index].length = length;
+    tx_desc_array[index].cmd |= E1000_TXD_CMD_EOP;
+    e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);
+
+
+    local_flush_dcache();
+
+    return length;
 }
 
 /**

@@ -119,7 +119,7 @@ ELF_CREATEIMAGE = $(DIR_BUILD)/$(notdir $(SRC_CREATEIMAGE:.c=))
 # Top-level Rules
 # -----------------------------------------------------------------------
 
-all: dirs elf image asm # floppy
+all: dirs elf image asm padding# floppy
 
 dirs:
 	@mkdir -p $(DIR_BUILD)
@@ -170,7 +170,10 @@ padding:
 stat:
 	stat $(ELF_IMAGE)
 
-.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom padding stat run-net debug-net
+tcpdump:
+	sudo tcpdump -i tap0 -XX -vvv -nn
+
+.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom padding stat run-net debug-net tcpdump
 
 # -----------------------------------------------------------------------
 # UCAS-OS Rules
