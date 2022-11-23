@@ -145,7 +145,7 @@ run-smp:
 
 run-net:
 	-@sudo kill `sudo lsof | grep tun | awk '{print $$2}'`
-	sudo $(QEMU) $(QEMU_OPTS) $(QEMU_NET_OPT)
+	sudo $(QEMU) $(QEMU_OPTS) $(QEMU_NET_OPT) $(QEMU_SMP_OPT)
 
 debug:
 	$(QEMU) $(QEMU_OPTS) $(QEMU_DEBUG_OPT)
@@ -155,7 +155,7 @@ debug-smp:
 
 debug-net:
 	-@sudo kill `sudo lsof | grep tun | awk '{print $$2}'`
-	sudo $(QEMU) $(QEMU_OPTS) $(QEMU_DEBUG_OPT) $(QEMU_NET_OPT)
+	sudo $(QEMU) $(QEMU_OPTS) $(QEMU_DEBUG_OPT) $(QEMU_NET_OPT) $(QEMU_SMP_OPT)
 
 viewlog:
 	@if [ ! -e $(QEMU_LOG_FILE) ]; then touch $(QEMU_LOG_FILE); fi;
