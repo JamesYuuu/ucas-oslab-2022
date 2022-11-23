@@ -12,6 +12,7 @@
 #include <os/task.h>
 #include <os/smp.h>
 #include <os/irq.h>
+#include <os/net.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack_ori = INIT_KERNEL_STACK + PAGE_SIZE;
@@ -60,7 +61,7 @@ void do_scheduler(void)
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
     check_sleeping();
     // TODO: [p5-task3] Check send/recv queue to unblock PCBs
-    
+    unblock_net_queue();
     // TODO: [p2-task1] Modify the current_running[cpu_id] pointer.
     // Find the next task to run for this core.
     int flag = 0;

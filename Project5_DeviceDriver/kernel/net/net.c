@@ -10,6 +10,11 @@ static LIST_HEAD(recv_block_queue);
 
 int do_net_send(void *txpacket, int length)
 {
+    while (is_send_full())
+    {
+        int cpu_id = get_current_cpu_id();
+        do_block(&current_running[cpu_id]->list, &send_block_queue);
+    }
     // TODO: [p5-task1] Transmit one network packet via e1000 device
     int len = e1000_transmit(txpacket, length);
 
@@ -25,6 +30,11 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
     int len = 0;
     for (int i=0;i<pkt_num;i++)
     {
+        while (is_recv_empty())
+        {
+            int cpu_id = get_current_cpu_id();
+            do_block(&current_running[cpu_id]->list, &send_block_queue);
+        }
         pkt_lens[i] = e1000_poll(rxbuffer + len);
         len += pkt_lens[i];
     }
@@ -38,3 +48,13 @@ void net_handle_irq(void)
 {
     // TODO: [p5-task4] Handle interrupts from network device
 }
+
+void unblock_net_queue(void)
+{
+    while (!list_empty(&send_block_queue)) 
+        do_unblock(send_block_queue.prev);
+    
+    while (!list_empty(&recv_block_queue))
+        do_unblock(recv_block_queue.prev);
+}
+    

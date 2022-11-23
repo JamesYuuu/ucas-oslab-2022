@@ -145,8 +145,6 @@ int e1000_transmit(void *txpacket, int length)
     tx_desc_array[index].cmd |= E1000_TXD_CMD_EOP;
     e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);
     local_flush_dcache();
-    // wait for the packet to be sent
-    while (!(tx_desc_array[index].status & E1000_TXD_STAT_DD)) ;
     return length;
 }
 
@@ -162,7 +160,6 @@ int e1000_poll(void *rxbuffer)
     // find the next rx descriptor
     uint32_t index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
     // FIXME: what if length > RX_PKT_SIZE?
-    while ((rx_desc_array[index].status & (E1000_RXD_STAT_DD | E1000_RXD_STAT_EOP)) != (E1000_RXD_STAT_DD | E1000_RXD_STAT_EOP)) ;
     int len = rx_desc_array[index].length;
     memcpy(rxbuffer, rx_pkt_buffer[index], len);
     // reset the descriptor
@@ -174,4 +171,17 @@ int e1000_poll(void *rxbuffer)
     e1000_write_reg(e1000, E1000_RDT, index);
     local_flush_dcache();
     return len;
+}
+
+int is_send_full(void)
+{
+    local_flush_dcache();
+    return ((e1000_read_reg(e1000, E1000_TDH) - e1000_read_reg(e1000, E1000_TDT)) == 1);
+}
+
+int is_recv_empty(void)
+{
+    local_flush_dcache();
+    uint32_t index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
+    return !(rx_desc_array[index].status & E1000_RXD_STAT_DD);
 }
