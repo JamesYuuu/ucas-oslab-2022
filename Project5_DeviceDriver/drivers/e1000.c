@@ -59,7 +59,6 @@ static void e1000_reset(void)
  **/
 static void e1000_configure_tx(void)
 {
-    local_flush_dcache();
     /* TODO: [p5-task1] Initialize tx descriptors */
     for (int i=0;i<TXDESCS;i++)
     {
@@ -76,7 +75,6 @@ static void e1000_configure_tx(void)
     e1000_write_reg(e1000, E1000_TDT, 0);
     /* TODO: [p5-task1] Program the Transmit Control Register */
     e1000_write_reg(e1000, E1000_TCTL, E1000_TCTL_EN | E1000_TCTL_PSP | E1000_TCTL_CT | E1000_TCTL_COLD);
-    local_flush_dcache();
 }
 
 /**
@@ -84,7 +82,6 @@ static void e1000_configure_tx(void)
  **/
 static void e1000_configure_rx(void)
 {
-    local_flush_dcache();
     /* TODO: [p5-task2] Set e1000 MAC Address to RAR[0] */
     e1000_write_reg(e1000, E1000_RAL, MAC_ADDR_LOW);
     e1000_write_reg(e1000, E1000_RAH, MAC_ADDR_HIGH | E1000_RAH_AV);
@@ -109,7 +106,6 @@ static void e1000_configure_rx(void)
     e1000_write_reg(e1000, E1000_RCTL, E1000_RCTL_RDMTS_HALF | E1000_RCTL_EN | E1000_RCTL_BAM | E1000_RCTL_SZ_2048 & ~E1000_RCTL_BSEX);
     /* TODO: [p5-task4] Enable RXDMT0 Interrupt */
     e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
-    local_flush_dcache();
 }
 
 /**
@@ -136,7 +132,6 @@ void e1000_init(void)
 int e1000_transmit(void *txpacket, int length)
 {
     /* TODO: [p5-task1] Transmit one packet from txpacket */
-    local_flush_dcache();
     // find the next tx descriptor
     // FIXME: what if length > RX_PKT_SIZE?
     uint32_t index = e1000_read_reg(e1000, E1000_TDT);
@@ -175,7 +170,6 @@ int e1000_poll(void *rxbuffer)
 
 int is_send_full(void)
 {
-    local_flush_dcache();
     return ((e1000_read_reg(e1000, E1000_TDH) - e1000_read_reg(e1000, E1000_TDT)) == 1);
 }
 
