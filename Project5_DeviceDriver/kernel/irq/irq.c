@@ -8,6 +8,7 @@
 #include <screen.h>
 #include <csr.h>
 #include <os/mm.h>
+#include <plic.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
@@ -36,6 +37,10 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p5-task4] external interrupt handler.
     // Note: plic_claim and plic_complete will be helpful ...
+    uint32_t hwirq = plic_claim();
+    if (hwirq == PLIC_E1000_PYNQ_IRQ) 
+        net_handle_irq();
+    plic_complete(hwirq);
 }
 
 void init_exception()
@@ -43,16 +48,17 @@ void init_exception()
     /* TODO: [p2-task3] initialize exc_table */
     /* NOTE: handle_syscall, handle_other, etc.*/
     for (int i=0;i<EXCC_COUNT;i++)
-        exc_table[i]=(handler_t)handle_other;
-    exc_table[EXCC_SYSCALL]          =(handler_t)handle_syscall;
-    exc_table[EXCC_LOAD_PAGE_FAULT]  =(handler_t)handle_page_fault;
-    exc_table[EXCC_STORE_PAGE_FAULT] =(handler_t)handle_page_fault;
+        exc_table[i] = (handler_t)handle_other;
+    exc_table[EXCC_SYSCALL]          = (handler_t)handle_syscall;
+    exc_table[EXCC_LOAD_PAGE_FAULT]  = (handler_t)handle_page_fault;
+    exc_table[EXCC_STORE_PAGE_FAULT] = (handler_t)handle_page_fault;
     exc_table[EXCC_INST_PAGE_FAULT]  = (handler_t)handle_page_fault;
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
     for (int i = 0; i < IRQC_COUNT; i++)
         irq_table[i] = (handler_t)handle_other;
     irq_table[IRQC_S_TIMER] = (handler_t)handle_irq_timer;
+    irq_table[IRQC_S_EXT]   = (handler_t)handle_irq_ext;
     /* TODO: [p2-task3] set up the entrypoint of exceptions */
     setup_exception();
 }

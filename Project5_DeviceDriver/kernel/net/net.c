@@ -12,6 +12,7 @@ int do_net_send(void *txpacket, int length)
 {
     while (is_send_full())
     {
+        e1000_write_reg(e1000,E1000_IMS,E1000_IMS_TXQE);
         int cpu_id = get_current_cpu_id();
         do_block(&current_running[cpu_id]->list, &send_block_queue);
     }
@@ -47,6 +48,7 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 void net_handle_irq(void)
 {
     // TODO: [p5-task4] Handle interrupts from network device
+    printk("111");
 }
 
 void unblock_net_queue(void)
