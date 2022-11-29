@@ -88,7 +88,7 @@ int plic_init(uint64_t plic_regs_addr, uint32_t nr_irqs)
 done:
     /* priority must be > threshold to trigger an interrupt */
     writel(threshold, handler->hart_base + CONTEXT_THRESHOLD);
-    for (hwirq = 1; hwirq <= nr_irqs; hwirq++) plic_toggle(handler, hwirq, 1);
+    for (hwirq = 1; hwirq <= nr_irqs; hwirq++) plic_toggle(handler, hwirq, 0);
 
 	if (hwirq > PLIC_E1000_QEMU_IRQ)
 	{

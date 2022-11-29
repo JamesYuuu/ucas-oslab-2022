@@ -61,7 +61,7 @@ void do_scheduler(void)
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
     check_sleeping();
     // TODO: [p5-task3] Check send/recv queue to unblock PCBs
-    unblock_net_queue();
+    // unblock_net_queue();
     // TODO: [p2-task1] Modify the current_running[cpu_id] pointer.
     // Find the next task to run for this core.
     int flag = 0;
