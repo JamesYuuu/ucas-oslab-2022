@@ -46,6 +46,7 @@
 #include <assert.h>
 #include <type.h>
 #include <csr.h>
+#include <plic.h>
 
 extern void ret_from_exception();
 
