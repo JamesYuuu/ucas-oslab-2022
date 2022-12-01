@@ -41,9 +41,9 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
     while (size > 0)
     {
         map_page_net(io_base, phys_addr, (PTE*)PGDIR_KVA);
-        io_base += PAGE_SIZE;
-        phys_addr += PAGE_SIZE;
-        size -= PAGE_SIZE;
+        io_base += NORMAL_PAGE_SIZE;
+        phys_addr += NORMAL_PAGE_SIZE;
+        size -= NORMAL_PAGE_SIZE;
     }
     local_flush_tlb_all();
     return vaddr;

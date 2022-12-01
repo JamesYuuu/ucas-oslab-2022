@@ -173,8 +173,8 @@ int is_send_full(void)
     return ((e1000_read_reg(e1000, E1000_TDH) - e1000_read_reg(e1000, E1000_TDT)) == 1);
 }
 
-static uint32_t index = 0;
-static uint32_t is_copied = 0;
+static uint32_t index;
+static uint32_t is_copied;
 
 int is_recv_empty(void)
 {
@@ -186,7 +186,7 @@ int is_recv_empty(void)
     }
     if (rx_desc_array[index].status & E1000_RXD_STAT_DD)
     {
-        is_copied = 1;
+        is_copied = 1;      
         return 0;
     }
     return 1;
