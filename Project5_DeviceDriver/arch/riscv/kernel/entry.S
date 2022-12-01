@@ -114,9 +114,6 @@
 ENTRY(enable_preempt)
   not t0, x0
   csrs CSR_SIE, t0
-  // mask SEIE if not needed
-  # li t0,SIE_SEIE
-  # csrc CSR_SIE, t0
   jr ra
 ENDPROC(enable_preempt)
 
@@ -206,3 +203,8 @@ ENTRY(exception_handler_entry)
   j ret_from_exception
 
 ENDPROC(exception_handler_entry)
+
+ENTRY(disable_external_interrupt)
+  li t0,SIE_SEIE
+  csrc CSR_SIE, t0
+ENDPROC(disable_external_interrupt)

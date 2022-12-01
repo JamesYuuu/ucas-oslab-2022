@@ -274,6 +274,7 @@ int main(void)
         while (1)
         {
             enable_preempt();
+            disable_external_interrupt();
             asm volatile("wfi");
         }
     }
