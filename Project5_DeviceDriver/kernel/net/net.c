@@ -40,9 +40,6 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
         pkt_lens[i] = e1000_poll(rxbuffer + len);
         len += pkt_lens[i];
     }
-
-    uint32_t a = plic_claim();
-    printk("a = %d\n", a);
     // TODO: [p5-task3] Call do_block when there is no packet on the way
 
     return len;  // Bytes it has received

@@ -137,6 +137,13 @@ static void init_pcb(void)
         list_init(&pcb[i].wait_list);
         list_init(&pcb[i].mm_list);
     }
+    /* TODO: [p2-task1] remember to initialize 'current_running' */
+    current_running[0] = &pid0_pcb;
+    current_running[1] = &pid1_pcb;
+}
+
+void init_shell(void)
+{
     pcb[0].pid = 1;
     pcb[0].kernel_sp = pcb[0].kernel_stack_base;
     pcb[0].user_sp = pcb[0].user_stack_base;
@@ -168,9 +175,6 @@ static void init_pcb(void)
     // init pcb stack
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, tasks[0].entry_point, &pcb[0]);
     list_add(&ready_queue, &(pcb[0].list));
-    /* TODO: [p2-task1] remember to initialize 'current_running' */
-    current_running[0] = &pid0_pcb;
-    current_running[1] = &pid1_pcb;
 }
 
 static void init_syscall(void)
@@ -276,7 +280,7 @@ int main(void)
 
     // FIXME: delete after double core
     // Cancel previous mapping for boot.c
-    cancel_mapping();
+    // cancel_mapping();
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
@@ -303,6 +307,10 @@ int main(void)
     plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
     e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
     printk("> [INIT] IOremap initialization succeeded.\n");
+
+    // Init shell
+    init_shell();
+    printk("> [INIT] Shell initialization succeeded.\n");
 
     // Init lock mechanism o(´^｀)o
     init_locks();
@@ -344,7 +352,7 @@ int main(void)
     smp_init();
 
     // wakeup_other_hart()
-    // wakeup_other_hart();
+    wakeup_other_hart();
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
