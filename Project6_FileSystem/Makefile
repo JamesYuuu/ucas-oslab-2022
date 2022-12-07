@@ -33,7 +33,7 @@ MINICOM         = minicom
 # Build/Debug Flags and Variables
 # -----------------------------------------------------------------------
 
-CFLAGS          = -O2 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
+CFLAGS          = -O0 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
 
 BOOT_INCLUDE    = -I$(DIR_ARCH)/include
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
@@ -165,7 +165,7 @@ minicom:
 	sudo $(MINICOM) -D $(TTYUSB1)
 
 padding:
-	dd if=/dev/zero of=$(ELF_IMAGE) oflag=append conv=notrunc bs=64MB count=2
+	dd if=/dev/zero of=$(ELF_IMAGE) oflag=append conv=notrunc bs=512MB count=2
 
 stat:
 	stat $(ELF_IMAGE)

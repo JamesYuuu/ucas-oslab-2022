@@ -299,7 +299,7 @@ int main(void)
 
     // FIXME: delete after double core
     // Cancel previous mapping for boot.c
-    // cancel_mapping();
+    cancel_mapping();
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
@@ -355,13 +355,17 @@ int main(void)
     plic_init(plic_addr, nr_irqs);
     printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
 
-    // Init network device
-    e1000_init();
-    printk("> [INIT] E1000 device initialized successfully.\n");
+    // // Init network device
+    // e1000_init();
+    // printk("> [INIT] E1000 device initialized successfully.\n");
 
-    // Init system call table (0_0)
-    init_syscall();
-    printk("> [INIT] System call initialized successfully.\n");
+    // // Init system call table (0_0)
+    // init_syscall();
+    // printk("> [INIT] System call initialized successfully.\n");
+
+    // Init file system
+    init_file_system();
+    printk("> [INIT] File system initialized successfully.\n");
 
     // Init screen (QAQ)
     init_screen();
@@ -371,7 +375,7 @@ int main(void)
     smp_init();
 
     // wakeup_other_hart()
-    wakeup_other_hart();
+    // wakeup_other_hart();
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
