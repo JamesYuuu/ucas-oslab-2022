@@ -352,16 +352,16 @@ int main(void)
     printk("> [INIT] Interrupt processing initialization succeeded.\n");
 
     // TODO: [p5-task4] Init plic
-    plic_init(plic_addr, nr_irqs);
-    printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
+    // plic_init(plic_addr, nr_irqs);
+    // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
 
-    // // Init network device
+    // Init network device
     // e1000_init();
     // printk("> [INIT] E1000 device initialized successfully.\n");
 
-    // // Init system call table (0_0)
-    // init_syscall();
-    // printk("> [INIT] System call initialized successfully.\n");
+    // Init system call table (0_0)
+    init_syscall();
+    printk("> [INIT] System call initialized successfully.\n");
 
     // Init file system
     init_file_system();
