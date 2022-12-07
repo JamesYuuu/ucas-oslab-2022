@@ -281,90 +281,105 @@ int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 int sys_mkfs(void)
 {
     // TODO [P6-task1]: Implement sys_mkfs
-    return 0;  // sys_mkfs succeeds
+    return invoke_syscall(SYSCALL_FS_MKFS,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_mkfs succeeds
 }
 
 int sys_statfs(void)
 {
     // TODO [P6-task1]: Implement sys_statfs
-    return 0;  // sys_statfs succeeds
+    return invoke_syscall(SYSCALL_FS_STATFS,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_statfs succeeds
 }
 
 int sys_cd(char *path)
 {
     // TODO [P6-task1]: Implement sys_cd
-    return 0;  // sys_cd succeeds
+    return invoke_syscall(SYSCALL_FS_CD,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_cd succeeds
 }
 
 int sys_mkdir(char *path)
 {
     // TODO [P6-task1]: Implement sys_mkdir
-    return 0;  // sys_mkdir succeeds
+    return invoke_syscall(SYSCALL_FS_MKDIR,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_mkdir succeeds
 }
 
 int sys_rmdir(char *path)
 {
     // TODO [P6-task1]: Implement sys_rmdir
-    return 0;  // sys_rmdir succeeds
+    return invoke_syscall(SYSCALL_FS_RMDIR,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_rmdir succeeds
 }
 
 int sys_ls(char *path, int option)
 {
     // TODO [P6-task1]: Implement sys_ls
     // Note: argument 'option' serves for 'ls -l' in A-core
-    return 0;  // sys_ls succeeds
+    return invoke_syscall(SYSCALL_FS_LS,(long)path,(long)option,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_ls succeeds
 }
 
 int sys_touch(char *path)
 {
     // TODO [P6-task2]: Implement sys_touch
-    return 0;  // sys_touch succeeds
+    return invoke_syscall(SYSCALL_FS_TOUCH,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_touch succeeds
 }
 
 int sys_cat(char *path)
 {
     // TODO [P6-task2]: Implement sys_cat
-    return 0;  // sys_cat succeeds
+    return invoke_syscall(SYSCALL_FS_CAT,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_cat succeeds
 }
 
 int sys_fopen(char *path, int mode)
 {
     // TODO [P6-task2]: Implement sys_fopen
-    return 0;  // return the id of file descriptor
+    return invoke_syscall(SYSCALL_FS_FOPEN,(long)path,(long)mode,IGNORE,IGNORE,IGNORE);
+    // return 0;  // return the id of file descriptor
 }
 
 int sys_fread(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement sys_fread
-    return 0;  // return the length of trully read data
+    return invoke_syscall(SYSCALL_FS_FREAD,(long)fd,(long)buff,(long)length,IGNORE,IGNORE);
+    // return 0;  // return the length of trully read data
 }
 
 int sys_fwrite(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement sys_fwrite
-    return 0;  // return the length of trully written data
+    return invoke_syscall(SYSCALL_FS_FWRITE,(long)fd,(long)buff,(long)length,IGNORE,IGNORE);
+    // return 0;  // return the length of trully written data
 }
 
 int sys_fclose(int fd)
 {
     // TODO [P6-task2]: Implement sys_fclose
-    return 0;  // sys_fclose succeeds
+    return invoke_syscall(SYSCALL_FS_FCLOSE,(long)fd,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_fclose succeeds
 }
 
 int sys_ln(char *src_path, char *dst_path)
 {
     // TODO [P6-task2]: Implement sys_ln
-    return 0;  // sys_ln succeeds 
+    return invoke_syscall(SYSCALL_FS_LN,(long)src_path,(long)dst_path,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_ln succeeds 
 }
 
 int sys_rm(char *path)
 {
     // TODO [P6-task2]: Implement sys_rm
-    return 0;  // sys_rm succeeds 
+    return invoke_syscall(SYSCALL_FS_RM,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);
+    // return 0;  // sys_rm succeeds 
 }
 
 int sys_lseek(int fd, int offset, int whence)
 {
     // TODO [P6-task2]: Implement sys_lseek
-    return 0;  // the resulting offset location from the beginning of the file
+    return invoke_syscall(SYSCALL_FS_LSEEK,(long)fd,(long)offset,(long)whence,IGNORE,IGNORE);
+    // return 0;  // the resulting offset location from the beginning of the file
 }
