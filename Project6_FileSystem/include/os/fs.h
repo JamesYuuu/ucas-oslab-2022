@@ -2,26 +2,113 @@
 #define __INCLUDE_OS_FS_H__
 
 #include <type.h>
+#include <os/mm.h>
+#include <os/task.h>
 
 /* macros of file system */
 #define SUPERBLOCK_MAGIC 0x20221205
 #define NUM_FDESCS 16
 
+// file_system start from 512mb
+
+#define FS_START         (512 * 1024 * 1024 / SECTOR_SIZE)       // start from 2^17 sector
+#define BLOCK_MAP_START  (FS_START + 1)                          
+#define INODE_MAP_START  (BLOCK_MAP_START + BLOCK_MAP_SIZE)
+#define INODE_START      (INODE_MAP_START + INODE_MAP_SIZE)
+#define DATA_START       (INODE_START + INODE_SECTOR_NUM)
+ 
+#define BLOCK_SIZE       4096                                    // 4K
+#define BLOCK_NUM        (512 * 1024 * 1024 / BLOCK_SIZE)        // 512MB = 2^17 * 4 KB
+
+#define INODE_SIZE       128                                     // inode size = 128 bytes
+#define INODE_NUM        (SECTOR_SIZE * 8)                       // inode number = 4096 
+#define INODE_SECTOR_NUM (INODE_NUM * INODE_SIZE / SECTOR_SIZE)  // inode sectors = 1k
+
+#define BLOCK_MAP_SIZE   (BLOCK_NUM / SECTOR_SIZE / 8)           // 32 sectors for blockmap
+#define INODE_MAP_SIZE   1                                       // 1 sectors for inodemap
+
+#define DATA_NUM         (BLOCK_NUM - (INODE_SECTOR_NUM + INODE_MAP_SIZE + BLOCK_MAP_SIZE) / 8 )
+
+#define DENTRY_SIZE      32
+
 /* data structures of file system */
 typedef struct superblock_t{
     // TODO [P6-task1]: Implement the data structure of superblock
+    uint64_t magic;
+
+    uint64_t fs_start;
+    uint64_t fs_block_num;
+
+    uint64_t block_map_start;
+    uint64_t block_map_size;
+
+    uint64_t inode_map_start;
+    uint64_t inode_map_size;
+
+    uint64_t inode_start;
+    uint64_t inode_free;
+    uint64_t inode_num;
+
+    uint64_t data_start;
+    uint64_t data_free;
+    uint64_t data_num;
+
+    uint64_t block_size;
+    uint64_t inode_size;
+    uint64_t dentry_size;
+
+    uint64_t root_ino;
+
+    char padding[512 - 128];
 } superblock_t;
+
+typedef enum dentry_type{
+    NODE_NULL,
+    NODE_DIR,
+    NODE_FILE,
+} dentry_type_t;
 
 typedef struct dentry_t{
     // TODO [P6-task1]: Implement the data structure of directory entry
+    uint32_t inode_id;
+    dentry_type_t type;
+    char name[32 - 4 - 4];
 } dentry_t;
+
+typedef enum ino_type{
+    INO_DIR,
+    INO_FILE,
+} ino_type_t;
+
+typedef enum ino_access{
+    INO_RDONLY,
+    INO_WRONLY,
+    INO_RDWR,
+} ino_access_t;
 
 typedef struct inode_t{ 
     // TODO [P6-task1]: Implement the data structure of inode
+    uint32_t ino;
+    ino_type_t type;
+    ino_access_t access;
+    uint32_t nlinks;
+    union{
+        uint32_t file_size;
+        uint32_t file_num;
+    };
+    uint32_t create_time;
+    uint32_t modify_time;
+
+    uint32_t direct_index[ 6 ];
+
+    char padding[128 - 52];
+
 } inode_t;
 
 typedef struct fdesc_t{
     // TODO [P6-task2]: Implement the data structure of file descriptor
+    uint32_t inode_id;
+    
 } fdesc_t;
 
 /* modes of do_fopen */

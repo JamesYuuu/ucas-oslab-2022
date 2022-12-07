@@ -212,7 +212,7 @@ mm_page_t *swap_out()
                 // copy va for swap in
                 uintptr_t va = temp_mm->va;
                 free_disk->va = va;
-                sd_write(kva2pa(temp_mm->kva), BLOCK_NUM, free_disk->block_id);
+                sd_write(kva2pa(temp_mm->kva), SECTOR_NUM, free_disk->block_id);
                 // set va pg_dir to invalid
                 del_mapping(va, pcb[i].pgdir, _PAGE_PRESENT);
                 printl("> [Info] Swap out va 0x%x from pid(%d) into block %d\n", temp_mm->va, pcb[i].pid, free_disk->block_id);
@@ -236,7 +236,7 @@ void swap_in(mm_page_t *disk_page)
     list_add(&free_disk_list, &disk_page->list);
     uintptr_t va = disk_page->va;
     uintptr_t kva = alloc_page_helper(va, current_running[cpu_id]);
-    sd_read(kva2pa(kva), BLOCK_NUM, disk_page->block_id);
+    sd_read(kva2pa(kva), SECTOR_NUM, disk_page->block_id);
     printl("> [Info] Swap in block %d into va 0x%x for pid(%d) \n", disk_page->block_id, va, current_running[cpu_id]->pid);
 }
 
@@ -258,16 +258,16 @@ void init_memory()
 
 void init_disk()
 {
-    uint32_t final_block_num;
+    uint32_t final_SECTOR_NUM;
     for (uint32_t i = 0; i < NUM_MAX_TASK; i++)
         if (tasks[i].entry_point == 0)
         {
-            final_block_num = (tasks[i - 1].start_addr + tasks[i - 1].filesz) / BLOCK_SIZE + 1;
+            final_SECTOR_NUM = (tasks[i - 1].start_addr + tasks[i - 1].filesz) / SECTOR_SIZE + 1;
             break;
         }
     for (uint32_t i = 0; i < FREE_DISK_NUM; i++)
     {
-        uint32_t block_id = final_block_num + i * BLOCK_NUM;
+        uint32_t block_id = final_SECTOR_NUM + i * SECTOR_NUM;
         free_disk[i].page_type = PAGE_DISK;
         free_disk[i].block_id = block_id;
         list_add(&free_disk_list, &free_disk[i].list);

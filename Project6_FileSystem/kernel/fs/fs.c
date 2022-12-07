@@ -1,5 +1,6 @@
 #include <os/string.h>
 #include <os/fs.h>
+#include <common.h>
 
 static superblock_t superblock;
 static fdesc_t fdesc_array[NUM_FDESCS];
@@ -7,14 +8,13 @@ static fdesc_t fdesc_array[NUM_FDESCS];
 int do_mkfs(void)
 {
     // TODO [P6-task1]: Implement do_mkfs
-
+    printk("[FS] Start Initialize filesystem!\n");
     return 0;  // do_mkfs succeeds
 }
 
 int do_statfs(void)
 {
     // TODO [P6-task1]: Implement do_statfs
-
     return 0;  // do_statfs succeeds
 }
 
@@ -108,4 +108,12 @@ int do_lseek(int fd, int offset, int whence)
     // TODO [P6-task2]: Implement do_lseek
 
     return 0;  // the resulting offset location from the beginning of the file
+}
+
+void init_file_system(void)
+{
+    sd_read(kva2pa(&superblock),1,FS_START);
+    if (superblock.magic == SUPERBLOCK_MAGIC) return;
+    do_mkfs();
+    return;    
 }

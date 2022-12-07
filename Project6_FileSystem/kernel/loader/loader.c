@@ -13,14 +13,14 @@ void load_task_img(int task_id, uintptr_t kva, uintptr_t prev_kva, int page_num)
 
     uint32_t filesz = tasks[task_id].filesz;
     uint32_t memsz = tasks[task_id].memsz;
-    uint32_t offset = tasks[task_id].start_addr % BLOCK_SIZE;
-    uint32_t block_id = tasks[task_id].start_addr / BLOCK_SIZE + page_num * BLOCK_NUM;
+    uint32_t offset = tasks[task_id].start_addr % SECTOR_SIZE;
+    uint32_t block_id = tasks[task_id].start_addr / SECTOR_SIZE + page_num * SECTOR_NUM;
 
     // bss sector
     if ((int64_t)(page_num * NORMAL_PAGE_SIZE - offset) > (int64_t)filesz)
         return;
 
-    sd_read(kva2pa(kva), BLOCK_NUM, block_id);
+    sd_read(kva2pa(kva), SECTOR_NUM, block_id);
 
     if (page_num != 0)
         memcpy((void *)prev_kva + NORMAL_PAGE_SIZE - offset, (void *)kva, offset);

@@ -8,8 +8,8 @@
 #define TASK_MAXNUM      16
 #define TASK_SIZE        0x10000
 
-#define BLOCK_SIZE 512
-#define BLOCK_NUM (NORMAL_PAGE_SIZE / BLOCK_SIZE)
+#define SECTOR_SIZE 512
+#define SECTOR_NUM (NORMAL_PAGE_SIZE / SECTOR_SIZE)
 
 #define NAME_MAXNUM      16
 /* TODO: [p1-task4] implement your own task_info_t! */
