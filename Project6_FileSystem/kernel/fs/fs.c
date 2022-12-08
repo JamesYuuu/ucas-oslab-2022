@@ -59,9 +59,9 @@ int do_statfs(void)
 int do_cd(char *path)
 {
     // TODO [P6-task1]: Implement do_cd
-    inode_t final_node = get_final_inode(path,current_ino);
-    if (final_node.ino==-1) return 1;
-        else current_ino = final_node.ino;
+    uint32_t ino_num = get_final_ino(path,current_ino);
+    if (ino_num == -1) return 1;
+        else current_ino = ino_num;
     return 0;  // do_cd succeeds
 }
 
@@ -90,8 +90,9 @@ int do_ls(char *path, int option)
     // TODO [P6-task1]: Implement do_ls
     // Note: argument 'option' serves for 'ls -l' in A-core
     // 1 sector = 16 dentry
-    inode_t final_node = get_final_inode(path,current_ino);
-    if (final_node.ino == -1) return 1;
+    uint32_t ino_num = get_final_ino(path,current_ino);
+    if (ino_num == -1) return 1;
+    inode_t final_node = get_inode(ino_num);
     for (int i=0;i<final_node.file_num/16+1;i++)
     {
         sd_read(kva2pa(dir_buffer),1,final_node.direct_index[i]);
@@ -331,7 +332,7 @@ int get_son_inode(char *path, inode_t *father_node)
     }
     return -1;
 }
-inode_t get_final_inode(char *path, uint32_t ino)
+uint32_t get_final_ino(char *path, uint32_t ino)
 {
     // seperate path
     char argv[10][20];
@@ -352,18 +353,15 @@ inode_t get_final_inode(char *path, uint32_t ino)
     strncpy(argv[argc++],path+start,i-start);
     if (len==0) argc--;
     // get final inode
-    inode_t temp_node = get_inode(ino);
+    int ino_num = ino;
+    inode_t temp_node = get_inode(ino_num);
     for (i=0;i<argc;i++)
     {
-        int ino_num = get_son_inode(argv[i],&temp_node);
-        if (ino_num == -1)
-        {
-            temp_node.ino = -1;
-            return temp_node;
-        }
+        ino_num = get_son_inode(argv[i],&temp_node);
+        if (ino_num == -1) return -1;
         temp_node = get_inode(ino_num);
     }
-    return temp_node;
+    return ino_num;
 }
 
 // set father dir
