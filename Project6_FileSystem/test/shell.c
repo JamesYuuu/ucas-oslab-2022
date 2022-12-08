@@ -197,7 +197,24 @@ void execute_command()
         }
         return;
     }
-
+    // command mkfs
+    if (strcmp(argv[0],"mkfs")==0)
+    {
+        if (sys_mkfs()!=0) printf("Error: Make file system failed\n");
+        return;
+    }
+    // command statfs
+    if (strcmp(argv[0],"statfs")==0)
+    {
+        sys_statfs();
+        return;
+    }
+    // command mkdir
+    if (strcmp(argv[0],"mkdir")==0)
+    {
+        if (sys_mkdir(argv[1])!=0) printf("Error: Make directory %s failed\n",argv[1]);
+        return;
+    }
     // unknown command
     printf("Error: Unknown command: %s\n",argv[0]);
     return;

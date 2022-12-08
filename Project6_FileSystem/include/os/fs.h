@@ -31,6 +31,9 @@
 
 #define DENTRY_SIZE      32
 
+#define min(a,b)    ((a) < (b) ? (a) : (b))
+#define max(a,b)    ((a) > (b) ? (a) : (b))
+
 /* data structures of file system */
 typedef struct superblock_t{
     // TODO [P6-task1]: Implement the data structure of superblock
@@ -48,6 +51,7 @@ typedef struct superblock_t{
     uint64_t inode_start;
     uint64_t inode_free;
     uint64_t inode_num;
+    uint64_t inode_sector_num;
 
     uint64_t data_start;
     uint64_t data_free;
@@ -59,7 +63,7 @@ typedef struct superblock_t{
 
     uint64_t root_ino;
 
-    char padding[512 - 128];
+    char padding[512 - 136];
 } superblock_t;
 
 typedef enum dentry_type{
@@ -70,7 +74,7 @@ typedef enum dentry_type{
 
 typedef struct dentry_t{
     // TODO [P6-task1]: Implement the data structure of directory entry
-    uint32_t inode_id;
+    uint32_t ino;
     dentry_type_t type;
     char name[32 - 4 - 4];
 } dentry_t;
@@ -96,12 +100,17 @@ typedef struct inode_t{
         uint32_t file_size;
         uint32_t file_num;
     };
+    uint32_t used_size;
+    
     uint32_t create_time;
     uint32_t modify_time;
 
-    uint32_t direct_index[ 6 ];
+    uint32_t direct_index[1 + 5];
+    uint32_t indirect_index1[3];
+    uint32_t indirect_index2[2];
+    uint32_t indirect_index3;
 
-    char padding[128 - 52];
+    char padding[128 - 80];
 
 } inode_t;
 
