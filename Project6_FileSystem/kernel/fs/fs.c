@@ -12,7 +12,7 @@ uint32_t current_ino;
 
 void sd_write_offset(uint64_t mem_address, unsigned block_id, unsigned offset,unsigned len)
 {
-    bzero(padding, SECTOR_SIZE);
+    sd_read(kva2pa(padding), 1 ,block_id);
     memcpy(padding + offset, (void*)mem_address,len);
     sd_write(kva2pa(padding), 1, block_id);
 }
@@ -107,6 +107,7 @@ inode_t init_inode_dir(void)
     inode.create_time = inode.modify_time = get_timer();
     inode.direct_index[0] = alloc_block();
     bzero(inode.padding, sizeof(inode.padding));
+    reflush_inode(&inode);
     return inode;
 }
 
@@ -133,7 +134,6 @@ void init_root_dir(void)
 {
     // init inode
     inode_t root_inode = init_inode_dir();
-    reflush_inode(&root_inode);
     // init root dentry
     init_dentry(&root_inode,root_inode.ino);
 
@@ -178,7 +178,7 @@ int do_statfs(void)
 {
     // TODO [P6-task1]: Implement do_statfs
     printk("magic: 0x%x (KFS)\n",superblock.magic);
-    printk("used sector :%d/%d, start sector: %d (0x%x)\n",superblock.fs_block_num-superblock.data_free,superblock.fs_block_num,superblock.fs_start,superblock.fs_start*512);
+    printk("used sector: %d/%d, start sector: %d (0x%x)\n",superblock.fs_block_num-superblock.data_free,superblock.fs_block_num,superblock.fs_start,superblock.fs_start*512);
     printk("inode map offset: %d, occupied sector: %d, used : %d/%d\n",superblock.inode_map_start-superblock.fs_start,superblock.inode_map_size,superblock.inode_num-superblock.inode_free,superblock.inode_num);
     printk("inode offset: %d, occupied sector: %d, used : %d/%d\n",superblock.inode_start-superblock.fs_start,superblock.inode_sector_num,superblock.inode_num-superblock.inode_free,superblock.inode_num);
     printk("data offset: %d, occupied sector: %d, used : %d/%d\n",superblock.data_start-superblock.fs_start,superblock.data_num * 8,superblock.data_num-superblock.data_free,superblock.data_num);
@@ -202,7 +202,7 @@ uint32_t get_father_ino(uint32_t ino)
     return dentry.ino;
 }
 
-int check_exist(char *path, inode_t *father_node)
+int get_son_inode(char *path, inode_t *father_node)
 {
     // 1 sector = 16 dentry
     for (int i=0;i<father_node->file_num/16+1;i++)
@@ -210,15 +210,30 @@ int check_exist(char *path, inode_t *father_node)
         sd_read(kva2pa(padding),1,father_node->direct_index[i]);
         dentry_t *dir = (dentry_t *)padding;
         for (int j=0;j<min(father_node->file_num-i*16,16);j++)
-            if (strcmp(dir[j].name,path)==0) return 1;
+            if (strcmp(dir[j].name,path)==0) return dir[j].ino;
     }
+    return -1;
 }
 
+void set_father_dir(inode_t *father_node, char *name, uint32_t ino)
+{
+    dentry_t dentry;
+    dentry.ino = ino;
+    dentry.type = NODE_DIR;
+    strcpy(dentry.name, name);
+    if (father_node->file_num%16==0) father_node->direct_index[father_node->file_num/16] = alloc_block();
+    sd_write_offset(&dentry, father_node->direct_index[father_node->file_num/16], (father_node->file_num%16)*superblock.dentry_size, superblock.dentry_size);
+    father_node->file_num++;
+    reflush_inode(father_node);
+}
 
 int do_cd(char *path)
 {
     // TODO [P6-task1]: Implement do_cd
-
+    inode_t father_node = get_inode(current_ino);
+    int son_ino = get_son_inode(path, &father_node);
+    if (son_ino==-1) return 1;
+        else current_ino = son_ino;
     return 0;  // do_cd succeeds
 }
 
@@ -227,11 +242,12 @@ int do_mkdir(char *path)
     // TODO [P6-task1]: Implement do_mkdir
     uint32_t father_ino = get_father_ino(current_ino);
     inode_t father_inode = get_inode(father_ino);    
-    if (check_exist(path,&father_inode)) return 1; // dir already exist
-    
+    if (get_son_inode(path,&father_inode)!=-1) return 1; // dir already exist
+    // init son dir
     inode_t dir_inode = init_inode_dir();
-
-
+    init_dentry(&dir_inode,father_ino);
+    // set father dir
+    set_father_dir(&father_inode,path,dir_inode.ino);
     return 0;  // do_mkdir succeeds
 }
 
@@ -246,7 +262,19 @@ int do_ls(char *path, int option)
 {
     // TODO [P6-task1]: Implement do_ls
     // Note: argument 'option' serves for 'ls -l' in A-core
+    // 1 sector = 16 dentry
+    inode_t father_node = get_inode(current_ino);
+    for (int i=0;i<father_node.file_num/16+1;i++)
+    {
+        sd_read(kva2pa(padding),1,father_node.direct_index[i]);
+        dentry_t *dir = (dentry_t *)padding;
+        for (int j=0;j<min(father_node.file_num-i*16,16);j++)
+        {
+            if (option==0) printk("%s ",dir[j].name);
 
+        }
+    }
+    printk("\n");
     return 0;  // do_ls succeeds
 }
 

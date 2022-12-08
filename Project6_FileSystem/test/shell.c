@@ -215,6 +215,20 @@ void execute_command()
         if (sys_mkdir(argv[1]) == 1) printf("Error: Directory %s is already exist\n",argv[1]);
         return;
     }
+    // command cd
+    if (strcmp(argv[0],"cd")==0)
+    {
+        if (sys_cd(argv[1]) == 1) printf("Error: Directory %s is not exist\n",argv[1]);
+        return;
+    }
+    // command ls
+    if (strcmp(argv[0],"ls")==0)
+    {
+        if (argc == 1) sys_ls(argv[1],0);
+            else if (argc == 2 && strcmp(argv[1],"-l")==0) sys_ls(argv[1],1);
+                else printf("Error: Invalid option\n");
+        return;
+    }
     // unknown command
     printf("Error: Unknown command: %s\n",argv[0]);
     return;
