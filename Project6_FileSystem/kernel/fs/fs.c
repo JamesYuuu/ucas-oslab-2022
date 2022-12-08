@@ -59,22 +59,20 @@ int do_statfs(void)
 int do_cd(char *path)
 {
     // TODO [P6-task1]: Implement do_cd
-    inode_t father_node = get_inode(current_ino);
-    int son_ino = get_son_inode(path, &father_node);
-    if (son_ino==-1) return 1;
-        else current_ino = son_ino;
+    inode_t final_node = get_final_inode(path,current_ino);
+    if (final_node.ino==-1) return 1;
+        else current_ino = final_node.ino;
     return 0;  // do_cd succeeds
 }
 
 int do_mkdir(char *path)
 {
     // TODO [P6-task1]: Implement do_mkdir
-    uint32_t father_ino = get_father_ino(current_ino);
-    inode_t father_inode = get_inode(father_ino);    
+    inode_t father_inode = get_inode(current_ino);    
     if (get_son_inode(path,&father_inode)!=-1) return 1; // dir already exist
     // init son dir
     inode_t dir_inode = init_inode_dir();
-    init_dentry(&dir_inode,father_ino);
+    init_dentry(&dir_inode,current_ino);
     // set father dir
     set_father_dir(&father_inode,path,dir_inode.ino);
     return 0;  // do_mkdir succeeds
@@ -92,12 +90,13 @@ int do_ls(char *path, int option)
     // TODO [P6-task1]: Implement do_ls
     // Note: argument 'option' serves for 'ls -l' in A-core
     // 1 sector = 16 dentry
-    inode_t father_node = get_inode(current_ino);
-    for (int i=0;i<father_node.file_num/16+1;i++)
+    inode_t final_node = get_final_inode(path,current_ino);
+    if (final_node.ino == -1) return 1;
+    for (int i=0;i<final_node.file_num/16+1;i++)
     {
-        sd_read(kva2pa(dir_buffer),1,father_node.direct_index[i]);
+        sd_read(kva2pa(dir_buffer),1,final_node.direct_index[i]);
         dentry_t *dir = (dentry_t *)dir_buffer;
-        for (int j=0;j<min(father_node.file_num-i*16,16);j++)
+        for (int j=0;j<min(final_node.file_num-i*16,16);j++)
         {
             if (option==1)
             {
@@ -194,10 +193,6 @@ void sd_read_offset(uint64_t mem_address, unsigned block_id, unsigned offset,uns
     sd_read(kva2pa(padding), 1, block_id);
     memcpy((void*)mem_address, padding + offset, len);
 }
-void reflush_inode(inode_t *inode)
-{
-    sd_write_offset(inode, superblock.inode_start + inode->ino / 4 ,(inode->ino%4)*superblock.inode_size,superblock.inode_size);
-}
 
 // alloc new sector or inode
 uint32_t alloc_sector()
@@ -287,11 +282,11 @@ void init_dentry(inode_t *inode,uint32_t parent_ino)
 {
     dentry_t dir_entry[2];
     dir_entry[0].ino = inode->ino;
-    dir_entry[0].type = INO_DIR;
+    dir_entry[0].type = NODE_DIR;
     strcpy(dir_entry[0].name, ".");
 
     dir_entry[1].ino = parent_ino;
-    dir_entry[1].type = INO_DIR;
+    dir_entry[1].type = NODE_DIR;
     strcpy(dir_entry[1].name, "..");
 
     sd_write_offset(dir_entry, inode->direct_index[0], 0, 2 * superblock.dentry_size);
@@ -305,7 +300,7 @@ void init_root_dir(void)
     current_ino = root_inode.ino;
 }
 
-// get inode related
+// inode related
 inode_t get_inode(uint32_t ino)
 {
     inode_t inode;
@@ -313,7 +308,10 @@ inode_t get_inode(uint32_t ino)
     sd_read_offset(&inode, superblock.inode_start + ino / 4, (ino%4)*superblock.inode_size, superblock.inode_size);
     return inode;
 }
-
+void reflush_inode(inode_t *inode)
+{
+    sd_write_offset(inode, superblock.inode_start + inode->ino / 4 ,(inode->ino%4)*superblock.inode_size,superblock.inode_size);
+}
 uint32_t get_father_ino(uint32_t ino)
 {
     inode_t inode = get_inode(ino);
@@ -321,7 +319,6 @@ uint32_t get_father_ino(uint32_t ino)
     sd_read_offset(&dentry, inode.direct_index[0], superblock.dentry_size, superblock.dentry_size);
     return dentry.ino;
 }
-
 int get_son_inode(char *path, inode_t *father_node)
 {
     // 1 sector = 16 dentry
@@ -333,6 +330,40 @@ int get_son_inode(char *path, inode_t *father_node)
             if (strcmp(dir[j].name,path)==0) return dir[j].ino;
     }
     return -1;
+}
+inode_t get_final_inode(char *path, uint32_t ino)
+{
+    // seperate path
+    char argv[10][20];
+    int i,start,argc;
+    int len = strlen(path);
+    i=start=argc=0;
+    bzero(argv,200);
+    while (i<len)
+    {
+        if (path[i] == '/')
+        {
+            strncpy(argv[argc],path+start,i-start);
+            start = i+1;
+            argc++;
+        }
+        i++;
+    }
+    strncpy(argv[argc++],path+start,i-start);
+    if (len==0) argc--;
+    // get final inode
+    inode_t temp_node = get_inode(ino);
+    for (i=0;i<argc;i++)
+    {
+        int ino_num = get_son_inode(argv[i],&temp_node);
+        if (ino_num == -1)
+        {
+            temp_node.ino = -1;
+            return temp_node;
+        }
+        temp_node = get_inode(ino_num);
+    }
+    return temp_node;
 }
 
 // set father dir

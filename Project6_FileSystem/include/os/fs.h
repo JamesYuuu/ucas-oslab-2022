@@ -161,6 +161,7 @@ extern void init_root_dir(void);
 extern inode_t get_inode(uint32_t ino);
 extern uint32_t get_father_ino(uint32_t ino);
 extern int get_son_inode(char *path, inode_t *father_node);
+extern inode_t get_final_inode(char *path, uint32_t ino);
 
 extern void set_father_dir(inode_t *father_node, char *name, uint32_t ino);
 

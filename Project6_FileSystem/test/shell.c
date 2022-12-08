@@ -224,9 +224,17 @@ void execute_command()
     // command ls
     if (strcmp(argv[0],"ls")==0)
     {
-        if (argc == 1) sys_ls(argv[1],0);
-            else if (argc == 2 && strcmp(argv[1],"-l")==0) sys_ls(argv[1],1);
-                else printf("Error: Invalid option\n");
+        int res;
+        if (strcmp(argv[1],"-l")==0) 
+        {
+            res=sys_ls(argv[2],1);
+            if (res==1) printf("Error: Directory %s is not exist\n",argv[2]);
+        }
+        else 
+        {
+            res=sys_ls(argv[1],0);
+            if (res==1) printf("Error: Directory %s is not exist\n",argv[1]);
+        }
         return;
     }
     // unknown command
