@@ -146,4 +146,24 @@ extern int do_ln(char *src_path, char *dst_path);
 extern int do_rm(char *path);
 extern int do_lseek(int fd, int offset, int whence);
 
+extern void sd_write_offset(uint64_t mem_address, unsigned block_id, unsigned offset,unsigned len);
+extern void sd_read_offset(uint64_t mem_address, unsigned block_id, unsigned offset,unsigned len);
+extern void reflush_inode(inode_t *inode);
+
+extern uint32_t alloc_sector(void);
+extern uint32_t alloc_inode(void);
+
+extern void init_superblock(void);
+extern inode_t init_inode_dir(void);
+extern void init_dentry(inode_t *inode,uint32_t parent_ino);
+extern void init_root_dir(void);
+
+extern inode_t get_inode(uint32_t ino);
+extern uint32_t get_father_ino(uint32_t ino);
+extern int get_son_inode(char *path, inode_t *father_node);
+
+extern void set_father_dir(inode_t *father_node, char *name, uint32_t ino);
+
+extern void print_timer(uint32_t time);
+
 #endif

@@ -7,138 +7,9 @@ static superblock_t superblock;
 static fdesc_t fdesc_array[NUM_FDESCS];
 
 static char padding[SECTOR_SIZE];
+static char dir_buffer[SECTOR_SIZE];
 
 uint32_t current_ino;
-
-void sd_write_offset(uint64_t mem_address, unsigned block_id, unsigned offset,unsigned len)
-{
-    sd_read(kva2pa(padding), 1 ,block_id);
-    memcpy(padding + offset, (void*)mem_address,len);
-    sd_write(kva2pa(padding), 1, block_id);
-}
-
-void sd_read_offset(uint64_t mem_address, unsigned block_id, unsigned offset,unsigned len)
-{
-    sd_read(kva2pa(padding), 1, block_id);
-    memcpy((void*)mem_address, padding + offset, len);
-}
-
-int alloc_sector()
-{
-    for (int i=0;i<superblock.sector_map_size;i++)
-    {
-        sd_read(kva2pa(padding), 1, superblock.sector_map_start+i);
-        for (int j=0;j<SECTOR_SIZE;j++)
-        {
-            if (padding[j] != 0xff)
-            {
-                for (int k=0;k<8;k++)
-                {
-                    if ((padding[j] & (1<<k)) == 0)
-                    {
-                        padding[j] |= (1<<k);
-                        sd_write(kva2pa(padding), 1, superblock.sector_map_start+i);
-                        superblock.data_free--;
-                        return i*SECTOR_SIZE*8+j*8+k + superblock.data_start;
-                    }
-                }
-            }
-        }
-    }
-}
-
-int alloc_inode()
-{
-    for (int i=0;i<superblock.inode_map_size;i++)
-    {
-        sd_read(kva2pa(padding), 1, superblock.inode_map_start+i);
-        for (int j=0;j<SECTOR_SIZE;j++)
-        {
-            if (padding[j] != 0xff)
-            {
-                for (int k=0;k<8;k++)
-                {
-                    if ((padding[j] & (1<<k)) == 0)
-                    {
-                        padding[j] |= (1<<k);
-                        sd_write(kva2pa(padding), 1, superblock.inode_map_start+i);
-                        superblock.inode_free--;
-                        return i*SECTOR_SIZE*8+j*8+k;
-                    }
-                }
-            }
-        }
-    }
-}
-
-void init_superblock(void)
-{
-    superblock.magic            = SUPERBLOCK_MAGIC;
-    superblock.fs_start         = FS_START;
-    superblock.fs_sector_num    = SECTOR_NUM;
-    superblock.sector_map_size  = SECTOR_MAP_SIZE;
-    superblock.sector_map_start = SECTOR_MAP_START;
-    superblock.inode_map_size   = INODE_MAP_SIZE;
-    superblock.inode_map_start  = INODE_MAP_START;
-    superblock.inode_start      = INODE_START;
-    superblock.inode_free       = INODE_NUM;
-    superblock.inode_num        = INODE_NUM;
-    superblock.inode_sector_num = INODE_SECTOR_NUM;
-    superblock.data_start       = DATA_START;
-    superblock.data_free        = DATA_NUM;
-    superblock.data_num         = DATA_NUM;
-    superblock.sector_size      = SECTOR_SIZE;
-    superblock.inode_size       = INODE_SIZE;
-    superblock.dentry_size      = DENTRY_SIZE;
-    superblock.root_ino         = 0;
-    bzero(superblock.padding, sizeof(superblock.padding));
-    sd_write(kva2pa(&superblock), 1 , FS_START);
-}
-
-inode_t init_inode_dir(void)
-{
-    inode_t inode;
-    inode.ino      = alloc_inode();
-    inode.type     = INO_DIR;
-    inode.access   = INO_RDWR;
-    inode.nlinks   = 1;
-    inode.file_num = 2;        // . and ..
-    inode.used_size = 2 * superblock.dentry_size;
-    inode.create_time = inode.modify_time = get_timer();
-    inode.direct_index[0] = alloc_sector();
-    bzero(inode.padding, sizeof(inode.padding));
-    reflush_inode(&inode);
-    return inode;
-}
-
-void reflush_inode(inode_t *inode)
-{
-    sd_write_offset(inode, superblock.inode_start + inode->ino / 4 ,(inode->ino%4)*superblock.inode_size,superblock.inode_size);
-}
-
-void init_dentry(inode_t *inode,uint32_t parent_ino)
-{
-    dentry_t dir_entry[2];
-    dir_entry[0].ino = inode->ino;
-    dir_entry[0].type = INO_DIR;
-    strcpy(dir_entry[0].name, ".");
-
-    dir_entry[1].ino = parent_ino;
-    dir_entry[1].type = INO_DIR;
-    strcpy(dir_entry[1].name, "..");
-
-    sd_write_offset(dir_entry, inode->direct_index[0], 0, 2 * superblock.dentry_size);
-}
-
-void init_root_dir(void)
-{
-    // init inode
-    inode_t root_inode = init_inode_dir();
-    // init root dentry
-    init_dentry(&root_inode,root_inode.ino);
-
-    current_ino = root_inode.ino;
-}
 
 int do_mkfs(void)
 {
@@ -162,7 +33,6 @@ int do_mkfs(void)
         sd_write(kva2pa(padding), 1, superblock.sector_map_start + i);
 
     printk("[FS]: Setting inode map...\n");
-    bzero(padding, SECTOR_SIZE);
     for (uint32_t i = 0; i < superblock.inode_map_size; i++)
         sd_write(kva2pa(padding), 1, superblock.inode_map_start + i);
 
@@ -184,47 +54,6 @@ int do_statfs(void)
     printk("data offset: %d, occupied sector: %d, used : %d/%d\n",superblock.data_start-superblock.fs_start,superblock.data_num,superblock.data_num-superblock.data_free,superblock.data_num);
     printk("inode entry size: %dB, dentry size: %dB\n",superblock.inode_size,superblock.dentry_size);
     return 0;  // do_statfs succeeds
-}
-
-inode_t get_inode(uint32_t ino)
-{
-    inode_t inode;
-    // 1 sector = 4 inode
-    sd_read_offset(&inode, superblock.inode_start + ino / 4, (ino%4)*superblock.inode_size, superblock.inode_size);
-    return inode;
-}
-
-uint32_t get_father_ino(uint32_t ino)
-{
-    inode_t inode = get_inode(ino);
-    dentry_t dentry;
-    sd_read_offset(&dentry, inode.direct_index[0], superblock.dentry_size, superblock.dentry_size);
-    return dentry.ino;
-}
-
-int get_son_inode(char *path, inode_t *father_node)
-{
-    // 1 sector = 16 dentry
-    for (int i=0;i<father_node->file_num/16+1;i++)
-    {
-        sd_read(kva2pa(padding),1,father_node->direct_index[i]);
-        dentry_t *dir = (dentry_t *)padding;
-        for (int j=0;j<min(father_node->file_num-i*16,16);j++)
-            if (strcmp(dir[j].name,path)==0) return dir[j].ino;
-    }
-    return -1;
-}
-
-void set_father_dir(inode_t *father_node, char *name, uint32_t ino)
-{
-    dentry_t dentry;
-    dentry.ino = ino;
-    dentry.type = NODE_DIR;
-    strcpy(dentry.name, name);
-    if (father_node->file_num%16==0) father_node->direct_index[father_node->file_num/16] = alloc_sector();
-    sd_write_offset(&dentry, father_node->direct_index[father_node->file_num/16], (father_node->file_num%16)*superblock.dentry_size, superblock.dentry_size);
-    father_node->file_num++;
-    reflush_inode(father_node);
 }
 
 int do_cd(char *path)
@@ -266,15 +95,27 @@ int do_ls(char *path, int option)
     inode_t father_node = get_inode(current_ino);
     for (int i=0;i<father_node.file_num/16+1;i++)
     {
-        sd_read(kva2pa(padding),1,father_node.direct_index[i]);
-        dentry_t *dir = (dentry_t *)padding;
+        sd_read(kva2pa(dir_buffer),1,father_node.direct_index[i]);
+        dentry_t *dir = (dentry_t *)dir_buffer;
         for (int j=0;j<min(father_node.file_num-i*16,16);j++)
         {
-            if (option==0) printk("%s ",dir[j].name);
-
+            if (option==1)
+            {
+                inode_t temp_node = get_inode(dir[j].ino);
+                if (temp_node.type == INO_DIR) printk("d");
+                    else printk("-");
+                if (temp_node.access == INO_RDONLY) printk("r- ");
+                    else if (temp_node.access == INO_WRONLY) printk("-w ");
+                        else if (temp_node.access == INO_RDWR) printk("rw ");
+                printk("%d %d %d ",temp_node.nlinks,temp_node.used_size,temp_node.ino);  
+                print_timer(temp_node.create_time);
+                print_timer(temp_node.modify_time);
+            }
+            printk("%s ",dir[j].name);
+            if (option==1) printk("\n");
         }
     }
-    printk("\n");
+    if (option==0) printk("\n");
     return 0;  // do_ls succeeds
 }
 
@@ -341,10 +182,180 @@ int do_lseek(int fd, int offset, int whence)
     return 0;  // the resulting offset location from the beginning of the file
 }
 
+// sd_read and sd_write offset
+void sd_write_offset(uint64_t mem_address, unsigned block_id, unsigned offset,unsigned len)
+{
+    sd_read(kva2pa(padding), 1 ,block_id);
+    memcpy(padding + offset, (void*)mem_address,len);
+    sd_write(kva2pa(padding), 1, block_id);
+}
+void sd_read_offset(uint64_t mem_address, unsigned block_id, unsigned offset,unsigned len)
+{
+    sd_read(kva2pa(padding), 1, block_id);
+    memcpy((void*)mem_address, padding + offset, len);
+}
+void reflush_inode(inode_t *inode)
+{
+    sd_write_offset(inode, superblock.inode_start + inode->ino / 4 ,(inode->ino%4)*superblock.inode_size,superblock.inode_size);
+}
+
+// alloc new sector or inode
+uint32_t alloc_sector()
+{
+    for (int i=0;i<superblock.sector_map_size;i++)
+    {
+        sd_read(kva2pa(padding), 1, superblock.sector_map_start+i);
+        for (int j=0;j<SECTOR_SIZE;j++)
+            if (padding[j] != 0xff)
+            {
+                for (int k=0;k<8;k++)
+                    if ((padding[j] & (1<<k)) == 0)
+                    {
+                        padding[j] |= (1<<k);
+                        sd_write(kva2pa(padding), 1, superblock.sector_map_start+i);
+                        superblock.data_free--;
+                        return i * SECTOR_SIZE * 8 + j * 8 + k + superblock.data_start;
+                    }
+            }
+    }
+}
+uint32_t alloc_inode()
+{
+    for (int i=0;i<superblock.inode_map_size;i++)
+    {
+        sd_read(kva2pa(padding), 1, superblock.inode_map_start+i);
+        for (int j=0;j<SECTOR_SIZE;j++)
+            if (padding[j] != 0xff)
+            {
+                for (int k=0;k<8;k++)
+                    if ((padding[j] & (1<<k)) == 0)
+                    {
+                        padding[j] |= (1<<k);
+                        sd_write(kva2pa(padding), 1, superblock.inode_map_start+i);
+                        superblock.inode_free--;
+                        return i * SECTOR_SIZE * 8 + j * 8 + k;
+                    }
+            }
+    }
+}
+
+// init different things
 void init_file_system(void)
 {
     sd_read(kva2pa(&superblock),1,FS_START);
     if (superblock.magic == SUPERBLOCK_MAGIC) return;
     do_mkfs();
     return;    
+}
+void init_superblock(void)
+{
+    superblock.magic            = SUPERBLOCK_MAGIC;
+    superblock.fs_start         = FS_START;
+    superblock.fs_sector_num    = SECTOR_NUM;
+    superblock.sector_map_size  = SECTOR_MAP_SIZE;
+    superblock.sector_map_start = SECTOR_MAP_START;
+    superblock.inode_map_size   = INODE_MAP_SIZE;
+    superblock.inode_map_start  = INODE_MAP_START;
+    superblock.inode_start      = INODE_START;
+    superblock.inode_free       = INODE_NUM;
+    superblock.inode_num        = INODE_NUM;
+    superblock.inode_sector_num = INODE_SECTOR_NUM;
+    superblock.data_start       = DATA_START;
+    superblock.data_free        = DATA_NUM;
+    superblock.data_num         = DATA_NUM;
+    superblock.sector_size      = SECTOR_SIZE;
+    superblock.inode_size       = INODE_SIZE;
+    superblock.dentry_size      = DENTRY_SIZE;
+    superblock.root_ino         = 0;
+    sd_write(kva2pa(&superblock), 1 , FS_START);
+}
+inode_t init_inode_dir(void)
+{
+    inode_t inode;
+    inode.ino      = alloc_inode();
+    inode.type     = INO_DIR;
+    inode.access   = INO_RDWR;
+    inode.nlinks   = 1;
+    inode.file_num = 2;        // . and ..
+    inode.used_size = 2 * superblock.dentry_size;
+    inode.create_time = inode.modify_time = get_timer();
+    inode.direct_index[0] = alloc_sector();
+    reflush_inode(&inode);
+    return inode;
+}
+void init_dentry(inode_t *inode,uint32_t parent_ino)
+{
+    dentry_t dir_entry[2];
+    dir_entry[0].ino = inode->ino;
+    dir_entry[0].type = INO_DIR;
+    strcpy(dir_entry[0].name, ".");
+
+    dir_entry[1].ino = parent_ino;
+    dir_entry[1].type = INO_DIR;
+    strcpy(dir_entry[1].name, "..");
+
+    sd_write_offset(dir_entry, inode->direct_index[0], 0, 2 * superblock.dentry_size);
+}
+void init_root_dir(void)
+{
+    // init inode
+    inode_t root_inode = init_inode_dir();
+    // init root dentry
+    init_dentry(&root_inode,root_inode.ino);
+    current_ino = root_inode.ino;
+}
+
+// get inode related
+inode_t get_inode(uint32_t ino)
+{
+    inode_t inode;
+    // 1 sector = 4 inode
+    sd_read_offset(&inode, superblock.inode_start + ino / 4, (ino%4)*superblock.inode_size, superblock.inode_size);
+    return inode;
+}
+
+uint32_t get_father_ino(uint32_t ino)
+{
+    inode_t inode = get_inode(ino);
+    dentry_t dentry;
+    sd_read_offset(&dentry, inode.direct_index[0], superblock.dentry_size, superblock.dentry_size);
+    return dentry.ino;
+}
+
+int get_son_inode(char *path, inode_t *father_node)
+{
+    // 1 sector = 16 dentry
+    for (int i=0;i<father_node->file_num/16+1;i++)
+    {
+        sd_read(kva2pa(dir_buffer),1,father_node->direct_index[i]);
+        dentry_t *dir = (dentry_t *)dir_buffer;
+        for (int j=0;j<min(father_node->file_num-i*16,16);j++)
+            if (strcmp(dir[j].name,path)==0) return dir[j].ino;
+    }
+    return -1;
+}
+
+// set father dir
+void set_father_dir(inode_t *father_node, char *name, uint32_t ino)
+{
+    dentry_t dentry;
+    dentry.ino = ino;
+    dentry.type = NODE_DIR;
+    strcpy(dentry.name, name);
+    if (father_node->file_num%16==0) father_node->direct_index[father_node->file_num/16] = alloc_sector();
+    sd_write_offset(&dentry, father_node->direct_index[father_node->file_num/16], (father_node->file_num%16)*superblock.dentry_size, superblock.dentry_size);
+    father_node->file_num++;
+    father_node->modify_time = get_timer();
+    father_node->nlinks++;
+    father_node->used_size += superblock.dentry_size;
+    reflush_inode(father_node);
+}
+
+// print time for ls
+void print_timer(uint32_t time)
+{
+    uint32_t hour = time / 3600;
+    uint32_t min = (time % 3600) / 60;
+    uint32_t sec = time % 60;
+    printk("%dh:%dm:%ds ", hour, min, sec);
 }
