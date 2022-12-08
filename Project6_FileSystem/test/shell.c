@@ -212,7 +212,7 @@ void execute_command()
     // command mkdir
     if (strcmp(argv[0],"mkdir")==0)
     {
-        if (sys_mkdir(argv[1])!=0) printf("Error: Make directory %s failed\n",argv[1]);
+        if (sys_mkdir(argv[1]) == 1) printf("Error: Directory %s is already exist\n",argv[1]);
         return;
     }
     // unknown command

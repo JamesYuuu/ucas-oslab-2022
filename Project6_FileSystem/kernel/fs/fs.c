@@ -39,7 +39,7 @@ int alloc_block()
                         padding[j] |= (1<<k);
                         sd_write(kva2pa(padding), 1, superblock.block_map_start+i);
                         superblock.data_free--;
-                        return i*SECTOR_SIZE*8+j*8+k;
+                        return i*SECTOR_SIZE*8+j*8+k + superblock.data_start;
                     }
                 }
             }
@@ -105,7 +105,7 @@ inode_t init_inode_dir(void)
     inode.file_num = 2;        // . and ..
     inode.used_size = 2 * superblock.dentry_size;
     inode.create_time = inode.modify_time = get_timer();
-    inode.direct_index[0] = alloc_block() + superblock.data_start;
+    inode.direct_index[0] = alloc_block();
     bzero(inode.padding, sizeof(inode.padding));
     return inode;
 }
@@ -202,6 +202,17 @@ uint32_t get_father_ino(uint32_t ino)
     return dentry.ino;
 }
 
+int check_exist(char *path, inode_t *father_node)
+{
+    // 1 sector = 16 dentry
+    for (int i=0;i<father_node->file_num/16+1;i++)
+    {
+        sd_read(kva2pa(padding),1,father_node->direct_index[i]);
+        dentry_t *dir = (dentry_t *)padding;
+        for (int j=0;j<min(father_node->file_num-i*16,16);j++)
+            if (strcmp(dir[j].name,path)==0) return 1;
+    }
+}
 
 
 int do_cd(char *path)
@@ -215,7 +226,11 @@ int do_mkdir(char *path)
 {
     // TODO [P6-task1]: Implement do_mkdir
     uint32_t father_ino = get_father_ino(current_ino);
-    inode_t father_inode = get_inode(father_ino);        
+    inode_t father_inode = get_inode(father_ino);    
+    if (check_exist(path,&father_inode)) return 1; // dir already exist
+    
+    inode_t dir_inode = init_inode_dir();
+
 
     return 0;  // do_mkdir succeeds
 }
