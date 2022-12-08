@@ -81,8 +81,10 @@ int do_mkdir(char *path)
 int do_rmdir(char *path)
 {
     // TODO [P6-task1]: Implement do_rmdir
-
-    return 0;  // do_rmdir succeeds
+    inode_t father_inode = get_inode(current_ino);
+    // remove son dir
+    return remove_son_dir(&father_inode,path);
+    //return 0;  // do_rmdir succeeds
 }
 
 int do_ls(char *path, int option)
@@ -378,6 +380,35 @@ void set_father_dir(inode_t *father_node, char *name, uint32_t ino)
     father_node->nlinks++;
     father_node->used_size += superblock.dentry_size;
     reflush_inode(father_node);
+}
+int remove_son_dir(inode_t *father_node, char *name)
+{
+    int index_i = -1;
+    int index_j;
+    // 1 sector = 16 dentry
+    for (int i=0;i<father_node->file_num/16+1;i++)
+    {
+        sd_read(kva2pa(dir_buffer),1,father_node->direct_index[i]);
+        dentry_t *dir = (dentry_t *)dir_buffer;
+        for (int j=0;j<min(father_node->file_num-i*16,16);j++)
+            if (strcmp(dir[j].name,name)==0)
+            { 
+                father_node->file_num--;
+                father_node->modify_time = get_timer();
+                father_node->nlinks--;
+                father_node->used_size -= superblock.dentry_size;
+                reflush_inode(father_node);
+                index_i = i;
+                index_j = j;
+                break;
+            }
+        if (index_i!=-1) break;
+    }
+    if (index_i==-1) return 1;
+    // move last dentry to index;
+    sd_read(kva2pa(dir_buffer),1,father_node->direct_index[(father_node->file_num+1)/16]);
+    dentry_t *dir = (dentry_t *)dir_buffer;
+    sd_write_offset(dir+(father_node->file_num+1)%16-1, father_node->direct_index[index_i], index_j*superblock.dentry_size, superblock.dentry_size);
 }
 
 // print time for ls

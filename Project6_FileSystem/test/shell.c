@@ -212,7 +212,23 @@ void execute_command()
     // command mkdir
     if (strcmp(argv[0],"mkdir")==0)
     {
+        if ((strcmp(argv[1],'.')==0) || (strcmp(argv[1],"..")==0))
+        {
+            printf("Error: Cannot make %s\n",argv[1]);
+            return;
+        }
         if (sys_mkdir(argv[1]) == 1) printf("Error: Directory %s is already exist\n",argv[1]);
+        return;
+    }
+    // command rmdir
+    if (strcmp(argv[0],"rmdir")==0)
+    {
+        if ((strcmp(argv[1],'.')==0) || (strcmp(argv[1],"..")==0))
+        {
+            printf("Error: Cannot remove %s\n",argv[1]);
+            return;
+        }
+        if (sys_rmdir(argv[1]) == 1) printf("Error: Directory %s is not exist\n",argv[1]);
         return;
     }
     // command cd
