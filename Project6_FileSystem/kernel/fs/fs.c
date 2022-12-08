@@ -23,11 +23,11 @@ void sd_read_offset(uint64_t mem_address, unsigned block_id, unsigned offset,uns
     memcpy((void*)mem_address, padding + offset, len);
 }
 
-int alloc_block()
+int alloc_sector()
 {
-    for (int i=0;i<superblock.block_map_size;i++)
+    for (int i=0;i<superblock.sector_map_size;i++)
     {
-        sd_read(kva2pa(padding), 1, superblock.block_map_start+i);
+        sd_read(kva2pa(padding), 1, superblock.sector_map_start+i);
         for (int j=0;j<SECTOR_SIZE;j++)
         {
             if (padding[j] != 0xff)
@@ -37,7 +37,7 @@ int alloc_block()
                     if ((padding[j] & (1<<k)) == 0)
                     {
                         padding[j] |= (1<<k);
-                        sd_write(kva2pa(padding), 1, superblock.block_map_start+i);
+                        sd_write(kva2pa(padding), 1, superblock.sector_map_start+i);
                         superblock.data_free--;
                         return i*SECTOR_SIZE*8+j*8+k + superblock.data_start;
                     }
@@ -75,9 +75,9 @@ void init_superblock(void)
 {
     superblock.magic            = SUPERBLOCK_MAGIC;
     superblock.fs_start         = FS_START;
-    superblock.fs_block_num     = BLOCK_NUM;
-    superblock.block_map_size   = BLOCK_MAP_SIZE;
-    superblock.block_map_start  = BLOCK_MAP_START;
+    superblock.fs_sector_num    = SECTOR_NUM;
+    superblock.sector_map_size  = SECTOR_MAP_SIZE;
+    superblock.sector_map_start = SECTOR_MAP_START;
     superblock.inode_map_size   = INODE_MAP_SIZE;
     superblock.inode_map_start  = INODE_MAP_START;
     superblock.inode_start      = INODE_START;
@@ -87,7 +87,7 @@ void init_superblock(void)
     superblock.data_start       = DATA_START;
     superblock.data_free        = DATA_NUM;
     superblock.data_num         = DATA_NUM;
-    superblock.block_size       = BLOCK_SIZE;
+    superblock.sector_size      = SECTOR_SIZE;
     superblock.inode_size       = INODE_SIZE;
     superblock.dentry_size      = DENTRY_SIZE;
     superblock.root_ino         = 0;
@@ -105,7 +105,7 @@ inode_t init_inode_dir(void)
     inode.file_num = 2;        // . and ..
     inode.used_size = 2 * superblock.dentry_size;
     inode.create_time = inode.modify_time = get_timer();
-    inode.direct_index[0] = alloc_block();
+    inode.direct_index[0] = alloc_sector();
     bzero(inode.padding, sizeof(inode.padding));
     reflush_inode(&inode);
     return inode;
@@ -149,17 +149,17 @@ int do_mkfs(void)
     init_superblock();
 
     printk("magic: 0x%x\n",superblock.magic);
-    printk("num_blocks: %d, start_sector: %d\n",superblock.fs_block_num,superblock.fs_start);
-    printk("block map offset: 1 (%d)\n",superblock.block_map_size);
+    printk("num_blocks: %d, start_sector: %d\n",superblock.fs_sector_num,superblock.fs_start);
+    printk("block map offset: 1 (%d)\n",superblock.sector_map_size);
     printk("inode map offset: %d (%d)\n",superblock.inode_map_start-superblock.fs_start,superblock.inode_map_size);
     printk("inode offset: %d (%d)\n",superblock.inode_start-superblock.fs_start,superblock.inode_sector_num);
-    printk("data offset: %d (%d)\n",superblock.data_start-superblock.fs_start,superblock.data_num * 8);
+    printk("data offset: %d (%d)\n",superblock.data_start-superblock.fs_start,superblock.data_num);
     printk("inode entry size: %dB, dentry size: %dB\n",superblock.inode_size,superblock.dentry_size);
 
     printk("[FS]: Setting block map...\n");
     bzero(padding, SECTOR_SIZE);
-    for (uint32_t i = 0; i < superblock.block_map_size; i++)
-        sd_write(kva2pa(padding), 1, superblock.block_map_start + i);
+    for (uint32_t i = 0; i < superblock.sector_map_size; i++)
+        sd_write(kva2pa(padding), 1, superblock.sector_map_start + i);
 
     printk("[FS]: Setting inode map...\n");
     bzero(padding, SECTOR_SIZE);
@@ -178,10 +178,10 @@ int do_statfs(void)
 {
     // TODO [P6-task1]: Implement do_statfs
     printk("magic: 0x%x (KFS)\n",superblock.magic);
-    printk("used sector: %d/%d, start sector: %d (0x%x)\n",superblock.fs_block_num-superblock.data_free,superblock.fs_block_num,superblock.fs_start,superblock.fs_start*512);
+    printk("used sector: %d/%d, start sector: %d (0x%x)\n",superblock.fs_sector_num-superblock.data_free,superblock.fs_sector_num,superblock.fs_start,superblock.fs_start*512);
     printk("inode map offset: %d, occupied sector: %d, used : %d/%d\n",superblock.inode_map_start-superblock.fs_start,superblock.inode_map_size,superblock.inode_num-superblock.inode_free,superblock.inode_num);
     printk("inode offset: %d, occupied sector: %d, used : %d/%d\n",superblock.inode_start-superblock.fs_start,superblock.inode_sector_num,superblock.inode_num-superblock.inode_free,superblock.inode_num);
-    printk("data offset: %d, occupied sector: %d, used : %d/%d\n",superblock.data_start-superblock.fs_start,superblock.data_num * 8,superblock.data_num-superblock.data_free,superblock.data_num);
+    printk("data offset: %d, occupied sector: %d, used : %d/%d\n",superblock.data_start-superblock.fs_start,superblock.data_num,superblock.data_num-superblock.data_free,superblock.data_num);
     printk("inode entry size: %dB, dentry size: %dB\n",superblock.inode_size,superblock.dentry_size);
     return 0;  // do_statfs succeeds
 }
@@ -221,7 +221,7 @@ void set_father_dir(inode_t *father_node, char *name, uint32_t ino)
     dentry.ino = ino;
     dentry.type = NODE_DIR;
     strcpy(dentry.name, name);
-    if (father_node->file_num%16==0) father_node->direct_index[father_node->file_num/16] = alloc_block();
+    if (father_node->file_num%16==0) father_node->direct_index[father_node->file_num/16] = alloc_sector();
     sd_write_offset(&dentry, father_node->direct_index[father_node->file_num/16], (father_node->file_num%16)*superblock.dentry_size, superblock.dentry_size);
     father_node->file_num++;
     reflush_inode(father_node);

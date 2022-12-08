@@ -11,23 +11,22 @@
 
 // file_system start from 512mb
 
-#define FS_START         (512 * 1024 * 1024 / SECTOR_SIZE)       // start from 2^17 sector
-#define BLOCK_MAP_START  (FS_START + 1)                          
-#define INODE_MAP_START  (BLOCK_MAP_START + BLOCK_MAP_SIZE)
+#define FS_START         (512 * 1024 * 1024 / SECTOR_SIZE)       // start from 2^20 sector
+#define SECTOR_MAP_START (FS_START + 1)                          
+#define INODE_MAP_START  (SECTOR_MAP_START + SECTOR_MAP_SIZE)
 #define INODE_START      (INODE_MAP_START + INODE_MAP_SIZE)
 #define DATA_START       (INODE_START + INODE_SECTOR_NUM)
  
-#define BLOCK_SIZE       4096                                    // 4K
-#define BLOCK_NUM        (512 * 1024 * 1024 / BLOCK_SIZE)        // 512MB = 2^17 * 4 KB
+#define SECTOR_NUM       (512 * 1024 * 1024 / SECTOR_SIZE)        // 512MB = 2^20 * 512B
 
 #define INODE_SIZE       128                                     // inode size = 128 bytes
 #define INODE_NUM        (SECTOR_SIZE * 8)                       // inode number = 4096 
 #define INODE_SECTOR_NUM (INODE_NUM * INODE_SIZE / SECTOR_SIZE)  // inode sectors = 1k
 
-#define BLOCK_MAP_SIZE   (BLOCK_NUM / SECTOR_SIZE / 8)           // 32 sectors for blockmap
+#define SECTOR_MAP_SIZE  (SECTOR_NUM / SECTOR_SIZE / 8)          // 256 sectors for blockmap
 #define INODE_MAP_SIZE   1                                       // 1 sectors for inodemap
 
-#define DATA_NUM         (BLOCK_NUM - (INODE_SECTOR_NUM + INODE_MAP_SIZE + BLOCK_MAP_SIZE) / 8 )
+#define DATA_NUM         (SECTOR_NUM - (INODE_SECTOR_NUM + INODE_MAP_SIZE + SECTOR_MAP_SIZE) )
 
 #define DENTRY_SIZE      32
 
@@ -40,10 +39,10 @@ typedef struct superblock_t{
     uint64_t magic;
 
     uint64_t fs_start;
-    uint64_t fs_block_num;
+    uint64_t fs_sector_num;
 
-    uint64_t block_map_start;
-    uint64_t block_map_size;
+    uint64_t sector_map_start;
+    uint64_t sector_map_size;
 
     uint64_t inode_map_start;
     uint64_t inode_map_size;
@@ -57,7 +56,7 @@ typedef struct superblock_t{
     uint64_t data_free;
     uint64_t data_num;
 
-    uint64_t block_size;
+    uint64_t sector_size;
     uint64_t inode_size;
     uint64_t dentry_size;
 
