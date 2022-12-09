@@ -65,23 +65,17 @@ typedef struct superblock_t{
     char padding[512 - 136];
 } superblock_t;
 
-typedef enum dentry_type{
-    NODE_NULL,
-    NODE_DIR,
-    NODE_FILE,
-} dentry_type_t;
-
-typedef struct dentry_t{
-    // TODO [P6-task1]: Implement the data structure of directory entry
-    uint32_t ino;
-    dentry_type_t type;
-    char name[32 - 4 - 4];
-} dentry_t;
-
 typedef enum ino_type{
     INO_DIR,
     INO_FILE,
 } ino_type_t;
+
+typedef struct dentry_t{
+    // TODO [P6-task1]: Implement the data structure of directory entry
+    uint32_t ino;
+    ino_type_t type;
+    char name[32 - 4 - 4];
+} dentry_t;
 
 typedef enum ino_access{
     INO_RDONLY,
@@ -116,7 +110,10 @@ typedef struct inode_t{
 typedef struct fdesc_t{
     // TODO [P6-task2]: Implement the data structure of file descriptor
     uint32_t inode_id;
-    
+    ino_access_t access;
+    state_t is_used;
+    uint32_t read_offset;
+    uint32_t write_offset;
 } fdesc_t;
 
 /* modes of do_fopen */

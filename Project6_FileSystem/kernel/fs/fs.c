@@ -8,6 +8,7 @@ static fdesc_t fdesc_array[NUM_FDESCS];
 
 static char padding[SECTOR_SIZE];
 static char dir_buffer[SECTOR_SIZE];
+static char file_buffer[SECTOR_SIZE];
 
 uint32_t current_ino;
 
@@ -135,13 +136,24 @@ int do_touch(char *path)
 int do_cat(char *path)
 {
     // TODO [P6-task2]: Implement do_cat
-
+    inode_t father_inode = get_inode(current_ino);
+    int son_ino = get_son_inode(path,&father_inode); 
+    if (son_ino == -1) return 1;                        // file not exist
+    // print son file
+    inode_t son_inode = get_inode(son_ino);
+    for (int i=0;i<son_inode.file_size/SECTOR_SIZE+1;i++)
+    {
+        sd_read(kva2pa(file_buffer),1,son_inode.direct_index[i]);
+        printk("%s",file_buffer);
+    }
+    printk("\n");
     return 0;  // do_cat succeeds
 }
 
 int do_fopen(char *path, int mode)
 {
     // TODO [P6-task2]: Implement do_fopen
+
 
     return 0;  // return the id of file descriptor
 }
@@ -309,11 +321,11 @@ void init_dentry(inode_t *inode,uint32_t parent_ino)
 {
     dentry_t dir_entry[2];
     dir_entry[0].ino = inode->ino;
-    dir_entry[0].type = NODE_DIR;
+    dir_entry[0].type = INO_DIR;
     strcpy(dir_entry[0].name, ".");
 
     dir_entry[1].ino = parent_ino;
-    dir_entry[1].type = NODE_DIR;
+    dir_entry[1].type = INO_DIR;
     strcpy(dir_entry[1].name, "..");
 
     sd_write_offset(dir_entry, inode->direct_index[0], 0, 2 * superblock.dentry_size);
@@ -395,7 +407,7 @@ void set_father_dir(inode_t *father_node, char *name, inode_t *son_inode)
 {
     dentry_t dentry;
     dentry.ino = son_inode->ino;
-    dentry.type = (son_inode->type == INO_DIR) ? NODE_DIR : NODE_FILE;
+    dentry.type = son_inode->type;
     strcpy(dentry.name, name);
     if (father_node->file_num%16==0) father_node->direct_index[father_node->file_num/16] = alloc_sector();
     sd_write_offset(&dentry, father_node->direct_index[father_node->file_num/16], (father_node->file_num%16)*superblock.dentry_size, superblock.dentry_size);

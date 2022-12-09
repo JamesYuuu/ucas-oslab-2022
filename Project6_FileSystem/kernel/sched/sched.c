@@ -167,7 +167,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
         return 0;
     int freepcb = 0;
     for (int i = 1; i < NUM_MAX_TASK; i++)
-        if (pcb[i].is_used == 0)
+        if (pcb[i].is_used == FREE)
         {
             freepcb = i;
             break;
@@ -248,7 +248,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pt_switchto->regs[0] = (reg_t)ret_from_exception; // ra
     pt_switchto->regs[1] = (reg_t)user_stack;         // sp
     pcb[freepcb].kernel_sp = (ptr_t)pt_switchto;
-    pcb[freepcb].is_used = 1;
+    pcb[freepcb].is_used = USED;
     // inherit mask from shell or it's parent
     int cpu_id = get_current_cpu_id();
     pcb[freepcb].mask = current_running[cpu_id]->mask;
@@ -264,7 +264,7 @@ int do_kill(pid_t pid)
     // Find the corresponding pcb
     int current_pcb = 0;
     for (int i = 0; i < TASK_MAXNUM; i++)
-        if (pcb[i].pid == pid && pcb[i].is_used == 1)
+        if (pcb[i].pid == pid && pcb[i].is_used == USED)
         {
             current_pcb = i;
             break;
@@ -281,7 +281,7 @@ int do_kill(pid_t pid)
         list_del(&pcb[current_pcb].list);
     pcb[current_pcb].status = TASK_EXITED;
     // Release pcb;
-    pcb[current_pcb].is_used = 0;
+    pcb[current_pcb].is_used = FREE;
     // Release all the waiting process
     while (!list_empty(&pcb[current_pcb].wait_list))
         do_unblock(pcb[current_pcb].wait_list.prev);
@@ -300,14 +300,14 @@ void do_exit(void)
     // Find the corresponding pcb
     int current_pcb = 0;
     for (int i = 0; i < TASK_MAXNUM; i++)
-        if (pcb[i].pid == current_running[cpu_id]->pid && pcb[i].is_used == 1)
+        if (pcb[i].pid == current_running[cpu_id]->pid && pcb[i].is_used == USED)
         {
             current_pcb = i;
             break;
         }
     current_running[cpu_id]->status = TASK_EXITED;
     // Release pcb;
-    pcb[current_pcb].is_used = 0;
+    pcb[current_pcb].is_used = FREE;
     // Unblock all the waiting process
     while (!list_empty(&current_running[cpu_id]->wait_list))
         do_unblock(current_running[cpu_id]->wait_list.prev);
@@ -327,7 +327,7 @@ int do_waitpid(pid_t pid)
     // Find the corresponding pcb
     int current_pcb = 0;
     for (int i = 0; i < TASK_MAXNUM; i++)
-        if (pcb[i].pid == pid && pcb[i].is_used == 1)
+        if (pcb[i].pid == pid && pcb[i].is_used == USED)
         {
             current_pcb = i;
             break;
@@ -346,7 +346,7 @@ void do_process_show()
     printk("[Process Table]:\n");
     for (int i = 0; i < NUM_MAX_TASK; i++)
     {
-        if (pcb[i].is_used == 0)
+        if (pcb[i].is_used == FREE)
             continue;
         printk("[%d] PID : %d  ", i, pcb[i].pid);
         switch (pcb[i].status)
@@ -389,7 +389,7 @@ void do_process_show()
     printk("[Thread Table]:\n");
     for (int i = 0; i < NUM_MAX_THREAD; i++)
     {
-        if (tcb[i].is_used == 0)
+        if (tcb[i].is_used == FREE)
             continue;
         printk("[%d] TID : %d  ", i, tcb[i].pid);
         switch (tcb[i].status)
@@ -443,7 +443,7 @@ pid_t do_taskset_p(pid_t pid, int mask)
     // Find the corresponding pcb
     int current_pcb = 0;
     for (int i = 0; i < TASK_MAXNUM; i++)
-        if (pcb[i].pid == pid && pcb[i].is_used == 1)
+        if (pcb[i].pid == pid && pcb[i].is_used == USED)
         {
             current_pcb = i;
             break;
@@ -477,7 +477,7 @@ pid_t do_taskset(char *name, int argc, char *argv[], int mask)
     // Find the corresponding pcb
     int current_pcb = 0;
     for (int i = 0; i < TASK_MAXNUM; i++)
-        if (pcb[i].pid == pid && pcb[i].is_used == 1)
+        if (pcb[i].pid == pid && pcb[i].is_used == USED)
         {
             current_pcb = i;
             break;

@@ -128,7 +128,7 @@ uintptr_t shm_page_get(int key)
 
     for (int i = 0; i < SHARED_PAGE_NUM; i++)
     {
-        if (shared_page[i].is_used == 0)
+        if (shared_page[i].is_used == FREE)
         {
             index = i;
             break;
@@ -140,7 +140,7 @@ uintptr_t shm_page_get(int key)
     list_init(&shared_page[index].mm_list);
     mm_page_t *free_page = allocPage();
     shared_page[index].key = key;
-    shared_page[index].is_used = 1;
+    shared_page[index].is_used = USED;
     shared_page[index].kva = free_page->kva;
     shared_page[index].count = 1;
     list_add(&shared_page[index].mm_list, &free_page->list);
@@ -157,7 +157,7 @@ void shm_page_dt(uintptr_t addr)
     int cpu_id = get_current_cpu_id();
     for (int i = 0; i < SHARED_PAGE_NUM; i++)
     {
-        if (shared_page[i].is_used == 0)
+        if (shared_page[i].is_used == FREE)
             continue;
         for (int j = 0; j < shared_page[i].count; j++)
         {
@@ -171,7 +171,7 @@ void shm_page_dt(uintptr_t addr)
                 // check if shared_page is empty
                 if (shared_page[i].count == 0)
                 {
-                    shared_page[i].is_used = 0;
+                    shared_page[i].is_used = FREE;
                     list_node_t *temp_node = shared_page[i].mm_list.prev;
                     list_del(temp_node);
                     list_add(&free_mm_list, temp_node);
@@ -195,7 +195,7 @@ mm_page_t *swap_out()
     while (1)
     {
         int i = (j++) % TASK_MAXNUM;
-        if (pcb[i].is_used && pcb[i].status != TASK_RUNNING)
+        if (pcb[i].is_used==USED && pcb[i].status != TASK_RUNNING)
         {
             list_node_t *temp_list = pcb[i].mm_list.prev; // we don't swap pg_dir
             temp_list = temp_list->prev;                  // we don't swap stack
@@ -345,7 +345,7 @@ int do_snapshot_shot(uintptr_t start_addr)
     int index = -1;
     for (int i = 0; i < SNAPSHOT_NUM; i++)
     {
-        if (snapshots[i].is_used == 0)
+        if (snapshots[i].is_used == FREE)
         {
             index = i;
             break;
@@ -359,7 +359,7 @@ int do_snapshot_shot(uintptr_t start_addr)
     page_dir->fixed = 1;
     snapshots[index].pgdir = page_dir->kva;
     snapshots[index].pid = current_running[cpu_id]->pid;
-    snapshots[index].is_used = 1;
+    snapshots[index].is_used = USED;
     current_running[cpu_id]->is_shot = 1;
     share_pgtable(snapshots[index].pgdir,PGDIR_KVA);
     // set all pages non-writeable and reset mapping

@@ -105,7 +105,7 @@ typedef struct pcb
     uint64_t wakeup_time;
 
     // If this PCB is used
-    int is_used;
+    state_t is_used;
 
     // Which core it pinned to
     mask_status_t mask;

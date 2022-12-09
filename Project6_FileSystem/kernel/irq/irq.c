@@ -123,7 +123,7 @@ void copy_on_write(uint64_t stval,pcb_t *pcb)
     for (int i = 0; i < SNAPSHOT_NUM; i++)
     {
         // snapshots not used or not belongs to this pcb;
-        if (snapshots[i].is_used == 0 || snapshots[i].pid != pcb->pid)
+        if (snapshots[i].is_used == FREE || snapshots[i].pid != pcb->pid)
             continue;
         // if it haven't been copied then copy the new page
         uintptr_t original_kva = get_kva_of(stval, pcb->pgdir);

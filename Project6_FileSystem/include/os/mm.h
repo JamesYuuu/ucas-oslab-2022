@@ -57,6 +57,11 @@ typedef enum page_type{
     PAGE_DISK,
 }page_type_t;
 
+typedef enum state{
+    FREE,
+    USED,
+}state_t;
+
 typedef struct mm_page{
     uintptr_t va;
     list_head list;
@@ -78,12 +83,12 @@ typedef struct shared_page{
     uintptr_t kva;
     shared_pair_t pair[NUM_MAX_TASK];
     int key;
-    int is_used;
+    state_t is_used;
     list_head mm_list;
 } shared_page_t;
 
 typedef struct snapshot{
-    int is_used;
+    state_t is_used;
     uintptr_t pgdir;
     list_head mm_list;
     pid_t pid;

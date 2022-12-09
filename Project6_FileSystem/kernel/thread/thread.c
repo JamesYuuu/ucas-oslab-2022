@@ -15,7 +15,7 @@ void pthread_create(pthread_t *thread, void (*start_routine)(void *), void *arg)
     int free_tcb = NUM_MAX_THREAD;
     for (int i = 0; i < NUM_MAX_THREAD; i++)
     {
-        if (tcb[i].is_used == 0)
+        if (tcb[i].is_used == FREE)
         {
             free_tcb = i;
             break;
@@ -42,7 +42,7 @@ void pthread_create(pthread_t *thread, void (*start_routine)(void *), void *arg)
 
     tcb[free_tcb].pid = current_running[cpu_id]->pid;
     tcb[free_tcb].status = TASK_READY;
-    tcb[free_tcb].is_used = 1;
+    tcb[free_tcb].is_used = USED;
     tcb[free_tcb].kernel_sp = tcb[free_tcb].kernel_stack_base;
     tcb[free_tcb].user_sp = tcb[free_tcb].user_stack_base;
     tcb[free_tcb].father = current_running[cpu_id];
@@ -91,7 +91,7 @@ int pthread_join(pthread_t thread)
     int cpu_id = get_current_cpu_id();
     int current_tcb = 0;
     for (int i = 0; i < NUM_MAX_THREAD; i++)
-        if (tcb[i].pid == thread && tcb[i].is_used == 1)
+        if (tcb[i].pid == thread && tcb[i].is_used == USED)
         {
             current_tcb = i;
             break;

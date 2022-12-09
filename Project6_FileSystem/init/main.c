@@ -151,7 +151,7 @@ void init_shell(void)
     pcb[0].status = TASK_READY;
     pcb[0].cursor_x = pcb[0].cursor_y = 0;
     pcb[0].thread_num = 0;
-    pcb[0].is_used = 1;
+    pcb[0].is_used = USED;
     pcb[0].mask = CORE_BOTH;
     // alloc page dir
     mm_page_t *page_dir = allocPage();
