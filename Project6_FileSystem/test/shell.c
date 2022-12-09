@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #define SHELL_BEGIN 25
 #define BUFFER_MAX 80
@@ -212,7 +213,7 @@ void execute_command()
     // command mkdir
     if (strcmp(argv[0],"mkdir")==0)
     {
-        if ((strcmp(argv[1],'.')==0) || (strcmp(argv[1],"..")==0))
+        if ((strcmp(argv[1],".")==0) || (strcmp(argv[1],"..")==0))
         {
             printf("Error: Cannot make %s\n",argv[1]);
             return;
@@ -223,7 +224,7 @@ void execute_command()
     // command rmdir
     if (strcmp(argv[0],"rmdir")==0)
     {
-        if ((strcmp(argv[1],'.')==0) || (strcmp(argv[1],"..")==0))
+        if ((strcmp(argv[1],".")==0) || (strcmp(argv[1],"..")==0))
         {
             printf("Error: Cannot remove %s\n",argv[1]);
             return;
@@ -263,6 +264,12 @@ void execute_command()
     if (strcmp(argv[0],"cat")==0)
     {
         if (sys_cat(argv[1]) == 1) printf("Error: File %s is not exist\n",argv[1]);
+        return;
+    }
+    // command ln
+    if (strcmp(argv[0],"ln")==0)
+    {
+        if (sys_ln(argv[1],argv[2]) == 1) printf("Error: File %s is not exist\n",argv[1]);
         return;
     }
     // unknown command

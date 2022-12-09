@@ -2,6 +2,7 @@
 #include <os/fs.h>
 #include <common.h>
 #include <os/time.h>
+#include <printk.h>
 
 static superblock_t superblock;
 static fdesc_t fdesc_array[NUM_FDESCS];
@@ -141,12 +142,19 @@ int do_cat(char *path)
     if (son_ino == -1) return 1;                        // file not exist
     // print son file
     inode_t son_inode = get_inode(son_ino);
-    for (int i=0;i<son_inode.file_size/SECTOR_SIZE+1;i++)
+    for (int i=0;i<son_inode.file_size/SECTOR_SIZE;i++)
     {
         sd_read(kva2pa(file_buffer),1,son_inode.direct_index[i]);
         printk("%s",file_buffer);
     }
-    printk("\n");
+    if (son_inode.file_size%SECTOR_SIZE!=0)
+    {
+        sd_read(kva2pa(file_buffer),1,son_inode.direct_index[son_inode.file_size/SECTOR_SIZE]);
+        for (int i=0;i<son_inode.file_size%SECTOR_SIZE;i++)
+            printk("%c",file_buffer[i]);
+    }
+
+    if (file_buffer[son_inode.file_size%SECTOR_SIZE-1]!='\n') printk("\n");
     return 0;  // do_cat succeeds
 }
 
@@ -179,15 +187,91 @@ int do_fopen(char *path, int mode)
 int do_fread(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement do_fread
+    if (fdesc_array[fd].is_used == FREE) return 1;      // fd not exist
+    if (fdesc_array[fd].mode == O_RDONLY) return 2;     // fd is not readable
+    
+    inode_t file = get_inode(fdesc_array[fd].ino);
+    int real_length = min(length,file.file_size - fdesc_array[fd].read_offset);
+    int start_sector = fdesc_array[fd].read_offset/SECTOR_SIZE;
+    int end_sector = (fdesc_array[fd].read_offset+real_length)/SECTOR_SIZE;
 
-    return 0;  // return the length of trully read data
+    int offset_buff, offset_file_buff, copy_length;
+    // currently not consider large file
+    for (int i=start_sector;i<=end_sector;i++)
+    {
+        sd_read(kva2pa(file_buffer),1,file.direct_index[i]);
+        if (i==start_sector)
+        {
+            offset_buff = 0;
+            offset_file_buff = fdesc_array[fd].read_offset % SECTOR_SIZE;
+            copy_length = SECTOR_SIZE -  offset_file_buff;
+        } 
+        else if (i==end_sector)
+        {
+            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].read_offset % SECTOR_SIZE;
+            offset_file_buff = 0;
+            copy_length = real_length - offset_buff;
+        }
+        else
+        {
+            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].read_offset % SECTOR_SIZE;
+            offset_file_buff = 0;
+            copy_length = SECTOR_SIZE;
+        }
+        memcpy(buff+offset_buff,file_buffer+offset_file_buff,copy_length);
+    }
+
+    fdesc_array[fd].read_offset += real_length;
+
+    return real_length;  // return the length of trully read data
 }
 
 int do_fwrite(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement do_fwrite
+    if (fdesc_array[fd].is_used == FREE) return 1;      // fd not exist
+    if (fdesc_array[fd].mode == O_WRONLY) return 2;     // fd is not writable
 
-    return 0;  // return the length of trully written data
+    inode_t file = get_inode(fdesc_array[fd].ino);
+    int start_sector = fdesc_array[fd].write_offset/SECTOR_SIZE;
+    int end_sector = (fdesc_array[fd].write_offset+length)/SECTOR_SIZE;
+
+    int offset_buff, offset_file_buff, copy_length;
+    // currently not consider large file
+    for (int i=start_sector;i<=end_sector;i++)
+    {
+        if (i==start_sector)
+        {
+            offset_buff = 0;
+            offset_file_buff = fdesc_array[fd].write_offset % SECTOR_SIZE;
+            copy_length = SECTOR_SIZE -  offset_file_buff;
+        } 
+        else if (i==end_sector)
+        {
+            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].write_offset % SECTOR_SIZE;
+            offset_file_buff = 0;
+            copy_length = length - offset_buff;
+        }
+        else
+        {
+            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].write_offset % SECTOR_SIZE;
+            offset_file_buff = 0;
+            copy_length = SECTOR_SIZE;
+        }
+        if (file.direct_index[i]==0) file.direct_index[i] = alloc_sector();
+
+        memcpy(file_buffer+offset_file_buff,buff+offset_buff,copy_length);
+        sd_write(kva2pa(file_buffer),1,file.direct_index[i]);
+    }
+
+    file.file_size +=length;
+    file.used_size +=length;
+    file.modify_time = get_timer();
+    fdesc_array[fd].write_offset += length;
+
+    reflush_inode(&file);
+
+    return length;  // return the length of trully written data
 }
 
 int do_fclose(int fd)
@@ -200,7 +284,39 @@ int do_fclose(int fd)
 int do_ln(char *src_path, char *dst_path)
 {
     // TODO [P6-task2]: Implement do_ln
+    inode_t father_node = get_inode(current_ino);
+    int src_offset = -1;
+    int dst_offset = -1;
+    dentry_t *dst_entry;
+    dentry_t *src_entry;
 
+    for (int i=0;i<father_node.file_num/16+1;i++)
+    {
+        sd_read(kva2pa(dir_buffer),1,father_node.direct_index[i]);
+        dentry_t *dir = (dentry_t *)dir_buffer;
+        for (int j=0;j<min(father_node.file_num-i*16,16);j++)
+        {
+            if (strcmp(dir[j].name,src_path)==0)
+            {
+                src_offset = i*16+j;
+                src_entry = &dir[j];
+            }
+            if (strcmp(dir[j].name,dst_path)==0) 
+            {
+                dst_offset = i*16+j; 
+                dst_entry = dir+j;
+            }
+            if (src_offset!=-1 && dst_offset!=-1) break;
+        }
+        if (src_offset!=-1 && dst_offset!=-1) break;
+    }
+    if (src_offset==-1 || dst_offset==-1) return 1;  // src or dst not exist 
+    if (src_entry->type==INO_DIR || dst_entry->type==INO_DIR) return 2;  // src or dst is a directory
+
+    release_inode(dst_entry->ino);
+    // reset dentry
+    dst_entry->ino = src_entry->ino;
+    sd_write_offset(dst_entry,father_node.direct_index[dst_offset/16],(dst_offset%16)*sizeof(dentry_t),sizeof(dentry_t));
     return 0;  // do_ln succeeds 
 }
 
@@ -250,6 +366,7 @@ uint32_t alloc_sector()
                     }
             }
     }
+    return 0;
 }
 uint32_t alloc_inode()
 {
@@ -269,6 +386,7 @@ uint32_t alloc_inode()
                     }
             }
     }
+    return 0;
 }
 void release_inode(uint32_t ino)
 {
@@ -316,6 +434,7 @@ void init_superblock(void)
 inode_t init_inode(ino_type_t inode_type)
 {
     inode_t inode;
+    bzero(&inode, superblock.inode_size);
     inode.ino      = alloc_inode();
     inode.type     = inode_type;
     inode.access   = INO_RDWR;

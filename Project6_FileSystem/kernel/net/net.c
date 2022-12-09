@@ -5,6 +5,7 @@
 #include <os/list.h>
 #include <os/smp.h>
 #include <printk.h>
+#include <os/net.h>
 
 static LIST_HEAD(send_block_queue);
 static LIST_HEAD(recv_block_queue);
