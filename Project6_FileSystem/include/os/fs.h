@@ -112,8 +112,7 @@ typedef struct fdesc_t{
     uint32_t ino;
     uint32_t mode;
     state_t is_used;
-    uint32_t read_offset;
-    uint32_t write_offset;
+    uint32_t offset;
 } fdesc_t;
 
 /* modes of do_fopen */

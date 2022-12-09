@@ -218,7 +218,7 @@ void execute_command()
             printf("Error: Cannot make %s\n",argv[1]);
             return;
         }
-        if (sys_mkdir(argv[1]) == 1) printf("Error: Directory %s is already exist\n",argv[1]);
+        if (sys_mkdir(argv[1]) == -1) printf("Error: Directory %s is already exist\n",argv[1]);
         return;
     }
     // command rmdir
@@ -229,13 +229,13 @@ void execute_command()
             printf("Error: Cannot remove %s\n",argv[1]);
             return;
         }
-        if (sys_rmdir(argv[1]) == 1) printf("Error: Directory %s is not exist\n",argv[1]);
+        if (sys_rmdir(argv[1]) == -1) printf("Error: Directory %s is not exist\n",argv[1]);
         return;
     }
     // command cd
     if (strcmp(argv[0],"cd")==0)
     {
-        if (sys_cd(argv[1]) == 1) printf("Error: Directory %s is not exist\n",argv[1]);
+        if (sys_cd(argv[1]) == -1) printf("Error: Directory %s is not exist\n",argv[1]);
         return;
     }
     // command ls
@@ -257,25 +257,25 @@ void execute_command()
     // command touch
     if (strcmp(argv[0],"touch")==0)
     {
-        if (sys_touch(argv[1]) == 1) printf("Error: File %s is already exist\n",argv[1]);
+        if (sys_touch(argv[1]) == -1) printf("Error: File %s is already exist\n",argv[1]);
         return;
     }
     // command cat
     if (strcmp(argv[0],"cat")==0)
     {
-        if (sys_cat(argv[1]) == 1) printf("Error: File %s is not exist\n",argv[1]);
+        if (sys_cat(argv[1]) == -1) printf("Error: File %s is not exist\n",argv[1]);
         return;
     }
     // command ln
     if (strcmp(argv[0],"ln")==0)
     {
-        if (sys_ln(argv[1],argv[2]) == 1) printf("Error: File %s is not exist\n",argv[1]);
+        if (sys_ln(argv[1],argv[2]) == -1) printf("Error: File %s is not exist\n",argv[1]);
         return;
     }
     // command rm
     if (strcmp(argv[0],"rm")==0)
     {
-        if (sys_rm(argv[1]) == 1) printf("Error: File %s is not exist\n",argv[1]);
+        if (sys_rm(argv[1]) == -1) printf("Error: File %s is not exist\n",argv[1]);
         return;
     }
     // unknown command

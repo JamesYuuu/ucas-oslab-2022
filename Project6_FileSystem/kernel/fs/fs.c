@@ -62,7 +62,7 @@ int do_cd(char *path)
 {
     // TODO [P6-task1]: Implement do_cd
     uint32_t ino_num = get_final_ino(path,current_ino);
-    if (ino_num == -1) return 1;
+    if (ino_num == -1) return -1;
         else current_ino = ino_num;
     return 0;  // do_cd succeeds
 }
@@ -71,7 +71,7 @@ int do_mkdir(char *path)
 {
     // TODO [P6-task1]: Implement do_mkdir
     inode_t father_inode = get_inode(current_ino);    
-    if (get_son_inode(path,&father_inode)!=-1) return 1; // dir already exist
+    if (get_son_inode(path,&father_inode)!=-1) return -1; // dir already exist
     // init son dir
     inode_t dir_inode = init_inode(INO_DIR);
     init_dentry(&dir_inode,current_ino);
@@ -95,7 +95,7 @@ int do_ls(char *path, int option)
     // Note: argument 'option' serves for 'ls -l' in A-core
     // 1 sector = 16 dentry
     uint32_t ino_num = get_final_ino(path,current_ino);
-    if (ino_num == -1) return 1;
+    if (ino_num == -1) return -1;
     inode_t final_node = get_inode(ino_num);
     for (int i=0;i<final_node.file_num/16+1;i++)
     {
@@ -127,7 +127,7 @@ int do_touch(char *path)
 {
     // TODO [P6-task2]: Implement do_touch
     inode_t father_inode = get_inode(current_ino);
-    if (get_son_inode(path,&father_inode)!=-1) return 1; // file already exist
+    if (get_son_inode(path,&father_inode)!=-1) return -1; // file already exist
     // init son file
     inode_t file_inode = init_inode(INO_FILE);
     set_father_dir(&father_inode,path,&file_inode);
@@ -139,7 +139,7 @@ int do_cat(char *path)
     // TODO [P6-task2]: Implement do_cat
     inode_t father_inode = get_inode(current_ino);
     int son_ino = get_son_inode(path,&father_inode); 
-    if (son_ino == -1) return 1;                        // file not exist
+    if (son_ino == -1) return -1;                        // file not exist
     // print son file
     inode_t son_inode = get_inode(son_ino);
     for (int i=0;i<son_inode.file_size/SECTOR_SIZE;i++)
@@ -163,7 +163,7 @@ int do_fopen(char *path, int mode)
     // TODO [P6-task2]: Implement do_fopen
     inode_t father_inode = get_inode(current_ino);
     int son_ino = get_son_inode(path,&father_inode);
-    if (son_ino == -1) return 1;                        // file not exist
+    if (son_ino == -1) return -1;                        // file not exist
     // get a spare fd
     int spare_fd = -1;
     for (int i=0;i<NUM_FDESCS;i++)
@@ -179,7 +179,7 @@ int do_fopen(char *path, int mode)
     fdesc_array[spare_fd].is_used = USED;
     fdesc_array[spare_fd].ino     = son_ino;
     fdesc_array[spare_fd].mode    = mode;
-    fdesc_array[spare_fd].read_offset = fdesc_array[spare_fd].write_offset = 0;
+    fdesc_array[spare_fd].offset  = 0;
 
     return spare_fd;  // return the id of file descriptor
 }
@@ -187,13 +187,13 @@ int do_fopen(char *path, int mode)
 int do_fread(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement do_fread
-    if (fdesc_array[fd].is_used == FREE) return 1;      // fd not exist
-    if (fdesc_array[fd].mode == O_RDONLY) return 2;     // fd is not readable
+    if (fdesc_array[fd].is_used == FREE) return -1;      // fd not exist
+    if (fdesc_array[fd].mode == O_WRONLY) return -2;     // fd is not readable
     
     inode_t file = get_inode(fdesc_array[fd].ino);
-    int real_length = min(length,file.file_size - fdesc_array[fd].read_offset);
-    int start_sector = fdesc_array[fd].read_offset/SECTOR_SIZE;
-    int end_sector = (fdesc_array[fd].read_offset+real_length)/SECTOR_SIZE;
+    int real_length = min(length,file.file_size - fdesc_array[fd].offset);
+    int start_sector = fdesc_array[fd].offset/SECTOR_SIZE;
+    int end_sector = (fdesc_array[fd].offset+real_length)/SECTOR_SIZE;
 
     int offset_buff, offset_file_buff, copy_length;
     // currently not consider large file
@@ -203,25 +203,25 @@ int do_fread(int fd, char *buff, int length)
         if (i==start_sector)
         {
             offset_buff = 0;
-            offset_file_buff = fdesc_array[fd].read_offset % SECTOR_SIZE;
+            offset_file_buff = fdesc_array[fd].offset % SECTOR_SIZE;
             copy_length = SECTOR_SIZE -  offset_file_buff;
         } 
         else if (i==end_sector)
         {
-            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].read_offset % SECTOR_SIZE;
+            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
             offset_file_buff = 0;
             copy_length = real_length - offset_buff;
         }
         else
         {
-            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].read_offset % SECTOR_SIZE;
+            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
             offset_file_buff = 0;
             copy_length = SECTOR_SIZE;
         }
         memcpy(buff+offset_buff,file_buffer+offset_file_buff,copy_length);
     }
 
-    fdesc_array[fd].read_offset += real_length;
+    fdesc_array[fd].offset += real_length;
 
     return real_length;  // return the length of trully read data
 }
@@ -229,12 +229,12 @@ int do_fread(int fd, char *buff, int length)
 int do_fwrite(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement do_fwrite
-    if (fdesc_array[fd].is_used == FREE) return 1;      // fd not exist
-    if (fdesc_array[fd].mode == O_WRONLY) return 2;     // fd is not writable
+    if (fdesc_array[fd].is_used == FREE) return -1;      // fd not exist
+    if (fdesc_array[fd].mode == O_RDONLY) return -2;     // fd is not writable
 
     inode_t file = get_inode(fdesc_array[fd].ino);
-    int start_sector = fdesc_array[fd].write_offset/SECTOR_SIZE;
-    int end_sector = (fdesc_array[fd].write_offset+length)/SECTOR_SIZE;
+    int start_sector = fdesc_array[fd].offset/SECTOR_SIZE;
+    int end_sector = (fdesc_array[fd].offset+length)/SECTOR_SIZE;
 
     int offset_buff, offset_file_buff, copy_length;
     // currently not consider large file
@@ -243,18 +243,18 @@ int do_fwrite(int fd, char *buff, int length)
         if (i==start_sector)
         {
             offset_buff = 0;
-            offset_file_buff = fdesc_array[fd].write_offset % SECTOR_SIZE;
+            offset_file_buff = fdesc_array[fd].offset % SECTOR_SIZE;
             copy_length = SECTOR_SIZE -  offset_file_buff;
         } 
         else if (i==end_sector)
         {
-            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].write_offset % SECTOR_SIZE;
+            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
             offset_file_buff = 0;
             copy_length = length - offset_buff;
         }
         else
         {
-            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].write_offset % SECTOR_SIZE;
+            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
             offset_file_buff = 0;
             copy_length = SECTOR_SIZE;
         }
@@ -267,7 +267,7 @@ int do_fwrite(int fd, char *buff, int length)
     file.file_size +=length;
     file.used_size +=length;
     file.modify_time = get_timer();
-    fdesc_array[fd].write_offset += length;
+    fdesc_array[fd].offset += length;
 
     reflush_inode(&file);
 
@@ -310,8 +310,8 @@ int do_ln(char *src_path, char *dst_path)
         }
         if (src_offset!=-1 && dst_offset!=-1) break;
     }
-    if (src_offset==-1 || dst_offset==-1) return 1;  // src or dst not exist 
-    if (src_entry->type==INO_DIR || dst_entry->type==INO_DIR) return 2;  // src or dst is a directory
+    if (src_offset==-1 || dst_offset==-1) return -1;  // src or dst not exist 
+    if (src_entry->type==INO_DIR || dst_entry->type==INO_DIR) return -2;  // src or dst is a directory
 
     release_inode(dst_entry->ino);
     // reset dentry
@@ -330,8 +330,14 @@ int do_rm(char *path)
 int do_lseek(int fd, int offset, int whence)
 {
     // TODO [P6-task2]: Implement do_lseek
+    if (fdesc_array[fd].is_used == FREE) return -1;      // fd not exist
+    
+    if (whence==SEEK_SET) fdesc_array[fd].offset = max(0,offset);
+        else if (whence==SEEK_CUR) fdesc_array[fd].offset = max(0,fdesc_array[fd].offset+offset);
+            else if (whence==SEEK_END) fdesc_array[fd].offset = max(0,get_inode(fdesc_array[fd].ino).file_size+offset);
+                else return -2;  // whence not valid
 
-    return 0;  // the resulting offset location from the beginning of the file
+    return fdesc_array[fd].offset;  // the resulting offset location from the beginning of the file
 }
 
 // sd_read and sd_write offset
@@ -566,7 +572,7 @@ int remove_son_dir(inode_t *father_node, char *name, ino_type_t type)
         for (int j=0;j<min(father_node->file_num-i*16,16);j++)
             if (strcmp(dir[j].name,name)==0)
             { 
-                if (dir[j].type != type) return 1;
+                if (dir[j].type != type) return -1;
                 father_node->file_num--;
                 father_node->modify_time = get_timer();
                 father_node->nlinks--;
@@ -582,7 +588,7 @@ int remove_son_dir(inode_t *father_node, char *name, ino_type_t type)
             }
         if (index_i!=-1) break;
     }
-    if (index_i==-1) return 1;
+    if (index_i==-1) return -1;
     // move last dentry to index;
     sd_read(kva2pa(dir_buffer),1,father_node->direct_index[(father_node->file_num+1)/16]);
     dentry_t *dir = (dentry_t *)dir_buffer;
