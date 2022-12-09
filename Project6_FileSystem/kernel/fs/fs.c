@@ -236,6 +236,18 @@ uint32_t alloc_inode()
             }
     }
 }
+void release_inode(uint32_t ino)
+{
+    sd_read(kva2pa(padding),1,superblock.inode_map_start+ino/(8*SECTOR_SIZE));
+    padding[ino%(8*SECTOR_SIZE)/8] &= ~(1<<(ino%8));
+    sd_write(kva2pa(padding),1,superblock.inode_map_start+ino/(8*SECTOR_SIZE));
+}
+void release_sector(uint32_t block_id)
+{
+    sd_read(kva2pa(padding),1,superblock.sector_map_start+block_id/(8*SECTOR_SIZE));
+    padding[block_id%(8*SECTOR_SIZE)/8] &= ~(1<<(block_id%8));
+    sd_write(kva2pa(padding),1,superblock.sector_map_start+block_id/(8*SECTOR_SIZE));
+}
 
 // init different things
 void init_file_system(void)
@@ -400,6 +412,7 @@ int remove_son_dir(inode_t *father_node, char *name)
                 reflush_inode(father_node);
                 index_i = i;
                 index_j = j;
+                release_inode(dir[j].ino);
                 break;
             }
         if (index_i!=-1) break;

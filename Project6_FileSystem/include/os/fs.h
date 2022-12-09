@@ -152,6 +152,8 @@ extern void reflush_inode(inode_t *inode);
 
 extern uint32_t alloc_sector(void);
 extern uint32_t alloc_inode(void);
+extern void release_inode(uint32_t ino);
+extern void release_sector(uint32_t block_id);
 
 extern void init_superblock(void);
 extern inode_t init_inode_dir(void);
