@@ -272,6 +272,12 @@ void execute_command()
         if (sys_ln(argv[1],argv[2]) == 1) printf("Error: File %s is not exist\n",argv[1]);
         return;
     }
+    // command rm
+    if (strcmp(argv[0],"rm")==0)
+    {
+        if (sys_rm(argv[1]) == 1) printf("Error: File %s is not exist\n",argv[1]);
+        return;
+    }
     // unknown command
     printf("Error: Unknown command: %s\n",argv[0]);
     return;

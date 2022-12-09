@@ -85,7 +85,7 @@ int do_rmdir(char *path)
     // TODO [P6-task1]: Implement do_rmdir
     inode_t father_inode = get_inode(current_ino);
     // remove son dir
-    return remove_son_dir(&father_inode,path);
+    return remove_son_dir(&father_inode,path,INO_DIR);
     //return 0;  // do_rmdir succeeds
 }
 
@@ -323,8 +323,8 @@ int do_ln(char *src_path, char *dst_path)
 int do_rm(char *path)
 {
     // TODO [P6-task2]: Implement do_rm
-
-    return 0;  // do_rm succeeds 
+    inode_t father_node = get_inode(current_ino);
+    return remove_son_dir(&father_node,path,INO_FILE);  // do_rm succeeds 
 }
 
 int do_lseek(int fd, int offset, int whence)
@@ -554,7 +554,7 @@ void set_father_dir(inode_t *father_node, char *name, inode_t *son_inode)
     father_node->used_size += superblock.dentry_size ;
     reflush_inode(father_node);
 }
-int remove_son_dir(inode_t *father_node, char *name)
+int remove_son_dir(inode_t *father_node, char *name, ino_type_t type)
 {
     int index_i = -1;
     int index_j;
@@ -566,6 +566,7 @@ int remove_son_dir(inode_t *father_node, char *name)
         for (int j=0;j<min(father_node->file_num-i*16,16);j++)
             if (strcmp(dir[j].name,name)==0)
             { 
+                if (dir[j].type != type) return 1;
                 father_node->file_num--;
                 father_node->modify_time = get_timer();
                 father_node->nlinks--;
@@ -573,7 +574,10 @@ int remove_son_dir(inode_t *father_node, char *name)
                 reflush_inode(father_node);
                 index_i = i;
                 index_j = j;
-                release_inode(dir[j].ino);
+                inode_t son_node = get_inode(dir[j].ino);
+                son_node.nlinks--;
+                if (type == INO_DIR || type == INO_FILE && son_node.nlinks==0) release_inode(dir[j].ino);
+                    else reflush_inode(&son_node);
                 break;
             }
         if (index_i!=-1) break;

@@ -163,7 +163,7 @@ extern int get_son_inode(char *path, inode_t *father_node);
 extern uint32_t get_final_ino(char *path, uint32_t ino);
 
 extern void set_father_dir(inode_t *father_node, char *name, inode_t *son_inode);
-extern int remove_son_dir(inode_t *father_node, char *name);
+extern int remove_son_dir(inode_t *father_node, char *name,ino_type_t type);
 
 extern void print_timer(uint32_t time);
 
