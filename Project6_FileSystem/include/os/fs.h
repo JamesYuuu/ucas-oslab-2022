@@ -156,7 +156,7 @@ extern void release_inode(uint32_t ino);
 extern void release_sector(uint32_t block_id);
 
 extern void init_superblock(void);
-extern inode_t init_inode_dir(void);
+extern inode_t init_inode(ino_type_t inode_type);
 extern void init_dentry(inode_t *inode,uint32_t parent_ino);
 extern void init_root_dir(void);
 
@@ -165,7 +165,7 @@ extern uint32_t get_father_ino(uint32_t ino);
 extern int get_son_inode(char *path, inode_t *father_node);
 extern uint32_t get_final_ino(char *path, uint32_t ino);
 
-extern void set_father_dir(inode_t *father_node, char *name, uint32_t ino);
+extern void set_father_dir(inode_t *father_node, char *name, inode_t *son_inode);
 extern int remove_son_dir(inode_t *father_node, char *name);
 
 extern void print_timer(uint32_t time);

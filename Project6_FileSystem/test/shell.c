@@ -253,6 +253,12 @@ void execute_command()
         }
         return;
     }
+    // command touch
+    if (strcmp(argv[0],"touch")==0)
+    {
+        if (sys_touch(argv[1]) == 1) printf("Error: File %s is already exist\n",argv[1]);
+        return;
+    }
     // unknown command
     printf("Error: Unknown command: %s\n",argv[0]);
     return;

@@ -71,10 +71,10 @@ int do_mkdir(char *path)
     inode_t father_inode = get_inode(current_ino);    
     if (get_son_inode(path,&father_inode)!=-1) return 1; // dir already exist
     // init son dir
-    inode_t dir_inode = init_inode_dir();
+    inode_t dir_inode = init_inode(INO_DIR);
     init_dentry(&dir_inode,current_ino);
     // set father dir
-    set_father_dir(&father_inode,path,dir_inode.ino);
+    set_father_dir(&father_inode,path,&dir_inode);
     return 0;  // do_mkdir succeeds
 }
 
@@ -124,7 +124,11 @@ int do_ls(char *path, int option)
 int do_touch(char *path)
 {
     // TODO [P6-task2]: Implement do_touch
-
+    inode_t father_inode = get_inode(current_ino);
+    if (get_son_inode(path,&father_inode)!=-1) return 1; // file already exist
+    // init son file
+    inode_t file_inode = init_inode(INO_FILE);
+    set_father_dir(&father_inode,path,&file_inode);
     return 0;  // do_touch succeeds
 }
 
@@ -279,15 +283,23 @@ void init_superblock(void)
     superblock.root_ino         = 0;
     sd_write(kva2pa(&superblock), 1 , FS_START);
 }
-inode_t init_inode_dir(void)
+inode_t init_inode(ino_type_t inode_type)
 {
     inode_t inode;
     inode.ino      = alloc_inode();
-    inode.type     = INO_DIR;
+    inode.type     = inode_type;
     inode.access   = INO_RDWR;
     inode.nlinks   = 1;
-    inode.file_num = 2;        // . and ..
-    inode.used_size = 2 * superblock.dentry_size;
+    if (inode_type == INO_DIR) 
+    {
+        inode.file_num = 2;        // . and ..
+        inode.used_size = 2 * superblock.dentry_size;
+    }
+    else 
+    {
+        inode.file_size = 0;
+        inode.used_size = 0;
+    }
     inode.create_time = inode.modify_time = get_timer();
     inode.direct_index[0] = alloc_sector();
     reflush_inode(&inode);
@@ -309,7 +321,7 @@ void init_dentry(inode_t *inode,uint32_t parent_ino)
 void init_root_dir(void)
 {
     // init inode
-    inode_t root_inode = init_inode_dir();
+    inode_t root_inode = init_inode(INO_DIR);
     // init root dentry
     init_dentry(&root_inode,root_inode.ino);
     current_ino = root_inode.ino;
@@ -379,18 +391,18 @@ uint32_t get_final_ino(char *path, uint32_t ino)
 }
 
 // set father dir
-void set_father_dir(inode_t *father_node, char *name, uint32_t ino)
+void set_father_dir(inode_t *father_node, char *name, inode_t *son_inode)
 {
     dentry_t dentry;
-    dentry.ino = ino;
-    dentry.type = NODE_DIR;
+    dentry.ino = son_inode->ino;
+    dentry.type = (son_inode->type == INO_DIR) ? NODE_DIR : NODE_FILE;
     strcpy(dentry.name, name);
     if (father_node->file_num%16==0) father_node->direct_index[father_node->file_num/16] = alloc_sector();
     sd_write_offset(&dentry, father_node->direct_index[father_node->file_num/16], (father_node->file_num%16)*superblock.dentry_size, superblock.dentry_size);
     father_node->file_num++;
     father_node->modify_time = get_timer();
     father_node->nlinks++;
-    father_node->used_size += superblock.dentry_size;
+    father_node->used_size += superblock.dentry_size ;
     reflush_inode(father_node);
 }
 int remove_son_dir(inode_t *father_node, char *name)
