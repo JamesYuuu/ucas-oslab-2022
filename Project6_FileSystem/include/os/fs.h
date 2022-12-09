@@ -109,8 +109,8 @@ typedef struct inode_t{
 
 typedef struct fdesc_t{
     // TODO [P6-task2]: Implement the data structure of file descriptor
-    uint32_t inode_id;
-    ino_access_t access;
+    uint32_t ino;
+    uint32_t mode;
     state_t is_used;
     uint32_t read_offset;
     uint32_t write_offset;

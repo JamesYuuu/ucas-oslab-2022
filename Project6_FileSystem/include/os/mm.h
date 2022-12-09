@@ -57,11 +57,6 @@ typedef enum page_type{
     PAGE_DISK,
 }page_type_t;
 
-typedef enum state{
-    FREE,
-    USED,
-}state_t;
-
 typedef struct mm_page{
     uintptr_t va;
     list_head list;

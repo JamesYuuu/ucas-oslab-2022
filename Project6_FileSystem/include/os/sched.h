@@ -74,6 +74,11 @@ typedef enum {
     CORE_BOTH,
 } mask_status_t;
 
+typedef enum state{
+    FREE,
+    USED,
+}state_t;
+
 /* Process Control Block */
 typedef struct pcb
 {

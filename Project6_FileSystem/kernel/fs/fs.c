@@ -153,9 +153,27 @@ int do_cat(char *path)
 int do_fopen(char *path, int mode)
 {
     // TODO [P6-task2]: Implement do_fopen
+    inode_t father_inode = get_inode(current_ino);
+    int son_ino = get_son_inode(path,&father_inode);
+    if (son_ino == -1) return 1;                        // file not exist
+    // get a spare fd
+    int spare_fd = -1;
+    for (int i=0;i<NUM_FDESCS;i++)
+    {
+        if (fdesc_array[i].is_used == FREE)
+        {
+            spare_fd = i;
+            break;
+        }
+    }
+    if (spare_fd == -1) return 2;                       // no spare fd
+    // init fd
+    fdesc_array[spare_fd].is_used = USED;
+    fdesc_array[spare_fd].ino     = son_ino;
+    fdesc_array[spare_fd].mode    = mode;
+    fdesc_array[spare_fd].read_offset = fdesc_array[spare_fd].write_offset = 0;
 
-
-    return 0;  // return the id of file descriptor
+    return spare_fd;  // return the id of file descriptor
 }
 
 int do_fread(int fd, char *buff, int length)
@@ -175,7 +193,7 @@ int do_fwrite(int fd, char *buff, int length)
 int do_fclose(int fd)
 {
     // TODO [P6-task2]: Implement do_fclose
-
+    fdesc_array[fd].is_used = FREE;
     return 0;  // do_fclose succeeds
 }
 
