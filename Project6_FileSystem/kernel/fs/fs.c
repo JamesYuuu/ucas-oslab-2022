@@ -23,7 +23,7 @@ int do_mkfs(void)
 
     printk("magic: 0x%x\n",superblock.magic);
     printk("num_blocks: %d, start_sector: %d\n",superblock.fs_sector_num,superblock.fs_start);
-    printk("block map offset: 1 (%d)\n",superblock.sector_map_size);
+    printk("sector map offset: 1 (%d)\n",superblock.sector_map_size);
     printk("inode map offset: %d (%d)\n",superblock.inode_map_start-superblock.fs_start,superblock.inode_map_size);
     printk("inode offset: %d (%d)\n",superblock.inode_start-superblock.fs_start,superblock.inode_sector_num);
     printk("data offset: %d (%d)\n",superblock.data_start-superblock.fs_start,superblock.data_num);
@@ -42,6 +42,8 @@ int do_mkfs(void)
     init_root_dir();
 
     printk("[FS]: Initialize filesystem finished!\n");
+
+    superblock.root_ino = current_ino;
 
     return 0;  // do_mkfs succeeds
 }
@@ -411,9 +413,9 @@ void release_sector(uint32_t block_id)
 void init_file_system(void)
 {
     sd_read(kva2pa(&superblock),1,FS_START);
-    if (superblock.magic == SUPERBLOCK_MAGIC) return;
-    do_mkfs();
-    return;    
+    if (superblock.magic == SUPERBLOCK_MAGIC) current_ino = superblock.root_ino;
+        else do_mkfs();
+    return;
 }
 void init_superblock(void)
 {

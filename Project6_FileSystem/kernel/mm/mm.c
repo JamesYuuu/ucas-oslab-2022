@@ -258,16 +258,9 @@ void init_memory()
 
 void init_disk()
 {
-    uint32_t final_SECTOR_NUM;
-    for (uint32_t i = 0; i < NUM_MAX_TASK; i++)
-        if (tasks[i].entry_point == 0)
-        {
-            final_SECTOR_NUM = (tasks[i - 1].start_addr + tasks[i - 1].filesz) / SECTOR_SIZE + 1;
-            break;
-        }
     for (uint32_t i = 0; i < FREE_DISK_NUM; i++)
     {
-        uint32_t block_id = final_SECTOR_NUM + i * SECTOR_NUM;
+        uint32_t block_id = SWAP_START + i * SECTOR_NUM;
         free_disk[i].page_type = PAGE_DISK;
         free_disk[i].block_id = block_id;
         list_add(&free_disk_list, &free_disk[i].list);

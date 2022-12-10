@@ -48,6 +48,8 @@
 #define SHARED_PAGE_NUM 16
 #define SNAPSHOT_NUM 16
 
+#define SWAP_START (256 * 1024 * 1024 / SECTOR_SIZE)       // start from 2^19 sector
+
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))

@@ -98,10 +98,12 @@ typedef struct inode_t{
     uint32_t create_time;
     uint32_t modify_time;
 
-    uint32_t direct_index[1 + 5];
-    uint32_t indirect_index1[3];
-    uint32_t indirect_index2[2];
-    uint32_t indirect_index3;
+    // 6 * 512B = 3KB
+    uint32_t direct_index[1 + 5];  // 3KB
+    // 512B = 128 int
+    uint32_t indirect_index1[3];   // represent 3*128 direct_index          3*64KB
+    uint32_t indirect_index2[2];   // represent 2*128*128 direct_index      2*8MB
+    uint32_t indirect_index3;      // represent 128*128*128 direct_index    1GB
 
     char padding[128 - 80];
 
