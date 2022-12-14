@@ -168,4 +168,6 @@ extern int remove_son_dir(inode_t *father_node, char *name,ino_type_t type);
 
 extern void print_timer(uint32_t time);
 
+extern unsigned int get_block_id(inode_t *file, int sector_id);
+
 #endif

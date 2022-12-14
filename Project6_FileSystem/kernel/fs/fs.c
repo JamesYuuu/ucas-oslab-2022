@@ -139,6 +139,7 @@ int do_touch(char *path)
 int do_cat(char *path)
 {
     // TODO [P6-task2]: Implement do_cat
+    // cat don't support big file
     inode_t father_inode = get_inode(current_ino);
     int son_ino = get_son_inode(path,&father_inode); 
     if (son_ino == -1) return -1;                        // file not exist
@@ -201,25 +202,11 @@ int do_fread(int fd, char *buff, int length)
     // currently not consider large file
     for (int i=start_sector;i<=end_sector;i++)
     {
-        sd_read(kva2pa(file_buffer),1,file.direct_index[i]);
-        if (i==start_sector)
-        {
-            offset_buff = 0;
-            offset_file_buff = fdesc_array[fd].offset % SECTOR_SIZE;
-            copy_length = SECTOR_SIZE -  offset_file_buff;
-        } 
-        else if (i==end_sector)
-        {
-            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
-            offset_file_buff = 0;
-            copy_length = real_length - offset_buff;
-        }
-        else
-        {
-            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
-            offset_file_buff = 0;
-            copy_length = SECTOR_SIZE;
-        }
+        unsigned int block_id = get_block_id(&file,i);
+        sd_read(kva2pa(file_buffer),1,block_id);
+        offset_buff      = (i==start_sector) ? 0 : (i-start_sector) * SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
+        offset_file_buff = (i==start_sector) ? fdesc_array[fd].offset % SECTOR_SIZE : 0;
+        copy_length      = (i==end_sector) ? real_length - offset_buff : SECTOR_SIZE - offset_file_buff;
         memcpy(buff+offset_buff,file_buffer+offset_file_buff,copy_length);
     }
 
@@ -242,28 +229,12 @@ int do_fwrite(int fd, char *buff, int length)
     // currently not consider large file
     for (int i=start_sector;i<=end_sector;i++)
     {
-        if (i==start_sector)
-        {
-            offset_buff = 0;
-            offset_file_buff = fdesc_array[fd].offset % SECTOR_SIZE;
-            copy_length = SECTOR_SIZE -  offset_file_buff;
-        } 
-        else if (i==end_sector)
-        {
-            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
-            offset_file_buff = 0;
-            copy_length = length - offset_buff;
-        }
-        else
-        {
-            offset_buff = (i-start_sector-1) * SECTOR_SIZE + SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
-            offset_file_buff = 0;
-            copy_length = SECTOR_SIZE;
-        }
-        if (file.direct_index[i]==0) file.direct_index[i] = alloc_sector();
-
+        unsigned int block_id = get_block_id(&file,i);
+        offset_buff      = (i==start_sector) ? 0 : (i-start_sector) * SECTOR_SIZE - fdesc_array[fd].offset % SECTOR_SIZE;
+        offset_file_buff = (i==start_sector) ? fdesc_array[fd].offset % SECTOR_SIZE : 0;
+        copy_length      = (i==end_sector) ? length - offset_buff : SECTOR_SIZE - offset_file_buff;
         memcpy(file_buffer+offset_file_buff,buff+offset_buff,copy_length);
-        sd_write(kva2pa(file_buffer),1,file.direct_index[i]);
+        sd_write(kva2pa(file_buffer),1,block_id);
     }
 
     file.file_size +=length;
@@ -604,4 +575,81 @@ void print_timer(uint32_t time)
     uint32_t min = (time % 3600) / 60;
     uint32_t sec = time % 60;
     printk("%dh:%dm:%ds ", hour, min, sec);
+}
+
+// for big file
+unsigned int get_block_id(inode_t* file, int sector_id)
+{
+    /*
+        uint32_t direct_index[1 + 5];  // 3KB
+        // 512B = 128 int
+        uint32_t indirect_index1[3];   // represent 3*128 direct_index          3*64KB
+        uint32_t indirect_index2[2];   // represent 2*128*128 direct_index      2*8MB
+        uint32_t indirect_index3;      // represent 128*128*128 direct_index    1GB
+    */
+
+    // currently we only support 8MB big file, so we use indirect_index2
+    unsigned int block_id=0;
+    if (sector_id<6) 
+    {
+        block_id=file->direct_index[sector_id];
+        if (block_id==0) block_id=file->direct_index[sector_id]=alloc_sector();
+    }
+    else if (sector_id<6+3*128)
+    {
+        int indirect1_num = (sector_id-6)/128;
+        int indirect1_offset = (sector_id-6)%128;
+        if (file->indirect_index1[indirect1_num]==0) 
+        {
+            file->indirect_index1[indirect1_num]=alloc_sector();
+            block_id = alloc_sector();
+            sd_write_offset(&block_id, file->indirect_index1[indirect1_num], indirect1_offset*4, 4);
+        }
+        else 
+        {
+            sd_read_offset(&block_id, file->indirect_index1[indirect1_num], indirect1_offset*4, 4);
+            if (block_id==0) 
+            {
+                block_id = alloc_sector();
+                sd_write_offset(&block_id, file->indirect_index1[indirect1_num], indirect1_offset*4, 4);
+            }
+        }
+    }
+    else
+    {
+        int indirect2_num = (sector_id-6-3*128)/128/128;
+        int indirect2_offset = (sector_id-6-3*128)%(128*128)/128;
+        int indirect1_offset = (sector_id-6-3*128)%128;
+        if (file->indirect_index2[indirect2_num]==0)
+        {
+            file->indirect_index2[indirect2_num]=alloc_sector();
+            unsigned int indirect1_id = alloc_sector();
+            sd_write_offset(&indirect1_id, file->indirect_index2[indirect2_num], indirect2_offset*4, 4);
+            block_id = alloc_sector();
+            sd_write_offset(&block_id, indirect1_id, indirect1_offset*4, 4);
+        }
+        else
+        {
+            unsigned int indirect1_id;
+            sd_read_offset(&indirect1_id, file->indirect_index2[indirect2_num], indirect2_offset*4, 4);
+            if (indirect1_id==0)
+            {
+                indirect1_id = alloc_sector();
+                sd_write_offset(&indirect1_id, file->indirect_index2[indirect2_num], indirect2_offset*4, 4);
+                block_id = alloc_sector();
+                sd_write_offset(&block_id, indirect1_id, indirect1_offset*4, 4);
+            }
+            else
+            {
+                sd_read_offset(&block_id, indirect1_id, indirect1_offset*4, 4);
+                if (block_id==0)
+                {
+                    block_id = alloc_sector();
+                    sd_write_offset(&block_id, indirect1_id, indirect1_offset*4, 4);
+                }
+            }
+        }
+    }
+    reflush_inode(file);
+    return block_id;
 }
