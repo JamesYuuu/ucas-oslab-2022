@@ -201,6 +201,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
     pcb[freepcb].cursor_x = pcb[freepcb].cursor_y = 0;
     pcb[freepcb].thread_num = 0;
     pcb[freepcb].is_shot = 0;
+    pcb[freepcb].is_fork = 0;
     list_add(&ready_queue, &pcb[freepcb].list);
     // temporarily copy argv to kernel 
     char argv_buff[ARG_MAX][ARG_LEN];
@@ -306,6 +307,7 @@ void do_exit(void)
             break;
         }
     current_running[cpu_id]->status = TASK_EXITED;
+    if (current_pcb == 0) do_scheduler();   // it is a thread
     // Release pcb;
     pcb[current_pcb].is_used = FREE;
     // Unblock all the waiting process
@@ -498,4 +500,38 @@ pid_t do_taskset(char *name, int argc, char *argv[], int mask)
         break;
     }
     return pid;
+}
+
+pid_t do_fork(void)
+{
+    int cpu_id = get_current_cpu_id();
+    int freepcb = 0;
+    for (int i = 1; i < NUM_MAX_TASK; i++)
+        if (pcb[i].is_used == FREE)
+        {
+            freepcb = i;
+            break;
+        }
+    if (freepcb == 0)
+        return 0;
+    // copy all pages
+    mm_page_t *page_dir = allocPage();
+    list_add(&pcb[freepcb].mm_list,&page_dir->list);
+    page_dir->fixed = 1;
+    pcb[freepcb].pgdir = page_dir->kva;
+    clear_pgdir(page_dir->kva);
+    list_node_t *temp_node = current_running[cpu_id]->mm_list.prev;
+    while (temp_node != &current_running[cpu_id]->mm_list)
+    {
+        mm_page_t *temp_mm = list_to_mm(temp_node);
+        if (temp_mm->fixed == 1)
+        {
+            temp_node = temp_node->prev;
+            continue;
+        }
+        set_mapping(temp_mm->va,temp_mm->kva,&pcb[freepcb]);
+        del_mapping(temp_mm->va, current_running[cpu_id]->pgdir, _PAGE_WRITE);
+        temp_node = temp_node->prev;
+    }
+    // TODO
 }

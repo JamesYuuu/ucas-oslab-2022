@@ -262,6 +262,8 @@ static void init_syscall(void)
     syscall[SYSCALL_FS_LN]     = (long (*)())do_ln;
     syscall[SYSCALL_FS_RM]     = (long (*)())do_rm;
     syscall[SYSCALL_FS_LSEEK]  = (long (*)())do_lseek;
+
+    syscall[SYSCALL_FORK]      = (long (*)())do_fork;
 }
 
 void cancel_mapping()

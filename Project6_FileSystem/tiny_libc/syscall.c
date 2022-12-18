@@ -383,3 +383,8 @@ int sys_lseek(int fd, int offset, int whence)
     return invoke_syscall(SYSCALL_FS_LSEEK,(long)fd,(long)offset,(long)whence,IGNORE,IGNORE);
     // return 0;  // the resulting offset location from the beginning of the file
 }
+
+int sys_fork(void)
+{
+    return invoke_syscall(SYSCALL_FORK,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
+}

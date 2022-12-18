@@ -40,7 +40,7 @@ void pthread_create(pthread_t *thread, void (*start_routine)(void *), void *arg)
     // alloc user_stack;
     alloc_page_helper(tcb[free_tcb].user_stack_base - PAGE_SIZE, current_running[cpu_id]);
 
-    tcb[free_tcb].pid = current_running[cpu_id]->pid;
+    tcb[free_tcb].pid = current_running[cpu_id]->pid + current_running[cpu_id]->thread_num;
     tcb[free_tcb].status = TASK_READY;
     tcb[free_tcb].is_used = USED;
     tcb[free_tcb].kernel_sp = tcb[free_tcb].kernel_stack_base;

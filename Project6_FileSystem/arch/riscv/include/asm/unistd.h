@@ -65,4 +65,6 @@
 #define SYSCALL_SNAPSHOT_RESTORE 13
 #define SYSCALL_GETPA 14
 
+#define SYSCALL_FORK 15
+
 #endif

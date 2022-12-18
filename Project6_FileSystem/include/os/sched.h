@@ -127,6 +127,10 @@ typedef struct pcb
 
     // [p4] add snapshot
     int is_shot;
+
+    // [p6] add fork
+    int is_fork;
+    struct pcb *father_process;
     
 } pcb_t;
 
@@ -173,5 +177,7 @@ extern void pthread_create(pthread_t *thread, void (*start_routine)(void*), void
 extern int pthread_join(pthread_t thread);
 
 extern pcb_t tcb[NUM_MAX_THREAD];
+
+extern pid_t do_fork();
 
 #endif

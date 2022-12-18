@@ -109,6 +109,12 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause)
                 local_flush_tlb_all();
                 return;
             }
+            if (current_running[cpu_id]->is_fork == 1)
+            {
+                copy_on_write_fork(stval,current_running[cpu_id]);
+                local_flush_tlb_all();
+                return;
+            }
         }
         temp_list = temp_list->prev;
     }
@@ -131,4 +137,13 @@ void copy_on_write(uint64_t stval,pcb_t *pcb)
         if (snapshot_kva == original_kva)
             set_new_page(stval,original_kva,&snapshots[i]);
     }
+}
+
+void copy_on_write_fork(uint64_t stval,pcb_t *pcb)
+{
+    reset_mapping(stval,pcb->pgdir,_PAGE_WRITE);
+    uintptr_t current_kva = get_kva_of(stval, pcb->pgdir);
+    uintptr_t father_kva = get_kva_of(stval, pcb->father->pgdir);
+    if (current_kva == father_kva)
+        set_new_page_fork(stval,father_kva,pcb);
 }

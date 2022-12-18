@@ -10,4 +10,6 @@ typedef uint64_t clock_t;
 
 clock_t clock();
 
+clock_t sec();
+
 #endif /* TIME_H */

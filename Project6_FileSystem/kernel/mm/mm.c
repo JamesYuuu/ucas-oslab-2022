@@ -426,3 +426,14 @@ void set_new_page(uint64_t va, uintptr_t original_kva , snapshot_t *snapshot)
     // set new mapping
     set_mapping_snapshot(va,free_page->kva,snapshot);
 } 
+
+void set_new_page_fork(uint64_t va, uintptr_t original_kva , pcb_t * pcb)
+{
+    // allocate a new page and copy the original page
+    mm_page_t* free_page = allocPage();
+    free_page->va = va;
+    list_add(&pcb->mm_list,&free_page->list);
+    memcpy((void *)free_page->kva, (void *)original_kva, NORMAL_PAGE_SIZE);
+    // set new mapping
+    set_mapping(va,free_page->kva,pcb);
+}
