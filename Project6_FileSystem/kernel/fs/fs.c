@@ -50,6 +50,7 @@ int do_mkfs(void)
 
 int do_statfs(void)
 {
+    sd_write(kva2pa(&superblock), 1 , FS_START);
     // TODO [P6-task1]: Implement do_statfs
     printk("magic: 0x%x (KFS)\n",superblock.magic);
     printk("used sector: %d/%d, start sector: %d (0x%x)\n",superblock.fs_sector_num-superblock.data_free,superblock.fs_sector_num,superblock.fs_start,superblock.fs_start*512);
@@ -63,7 +64,7 @@ int do_statfs(void)
 int do_cd(char *path)
 {
     // TODO [P6-task1]: Implement do_cd
-    uint32_t ino_num = get_final_ino(path,current_ino);
+    uint32_t ino_num = get_final_ino(path,current_ino,0);
     if (ino_num == -1) return -1;
         else current_ino = ino_num;
     return 0;  // do_cd succeeds
@@ -96,7 +97,7 @@ int do_ls(char *path, int option)
     // TODO [P6-task1]: Implement do_ls
     // Note: argument 'option' serves for 'ls -l' in A-core
     // 1 sector = 16 dentry
-    uint32_t ino_num = get_final_ino(path,current_ino);
+    uint32_t ino_num = get_final_ino(path,current_ino,0);
     if (ino_num == -1) return -1;
     inode_t final_node = get_inode(ino_num);
     for (int i=0;i<final_node.file_num/16+1;i++)
@@ -118,7 +119,11 @@ int do_ls(char *path, int option)
                 print_timer(temp_node.modify_time);
             }
             printk("%s ",dir[j].name);
-            if (option==1) printk("\n");
+            if (option==1)
+            {
+                if (dir[j].type==INO_LINK) printk("-> %s",dir[j].dst_name);
+                printk("\n");
+            }
         }
     }
     if (option==0) printk("\n");
@@ -257,39 +262,24 @@ int do_fclose(int fd)
 int do_ln(char *src_path, char *dst_path)
 {
     // TODO [P6-task2]: Implement do_ln
-    inode_t father_node = get_inode(current_ino);
-    int src_offset = -1;
-    int dst_offset = -1;
-    dentry_t *dst_entry;
-    dentry_t *src_entry;
-
-    for (int i=0;i<father_node.file_num/16+1;i++)
-    {
-        sd_read(kva2pa(dir_buffer),1,father_node.direct_index[i]);
-        dentry_t *dir = (dentry_t *)dir_buffer;
-        for (int j=0;j<min(father_node.file_num-i*16,16);j++)
-        {
-            if (strcmp(dir[j].name,src_path)==0)
-            {
-                src_offset = i*16+j;
-                src_entry = &dir[j];
-            }
-            if (strcmp(dir[j].name,dst_path)==0) 
-            {
-                dst_offset = i*16+j; 
-                dst_entry = dir+j;
-            }
-            if (src_offset!=-1 && dst_offset!=-1) break;
-        }
-        if (src_offset!=-1 && dst_offset!=-1) break;
-    }
-    if (src_offset==-1 || dst_offset==-1) return -1;  // src or dst not exist 
-    if (src_entry->type==INO_DIR || dst_entry->type==INO_DIR) return -2;  // src or dst is a directory
-
-    release_inode(dst_entry->ino);
-    // reset dentry
-    dst_entry->ino = src_entry->ino;
-    sd_write_offset(dst_entry,father_node.direct_index[dst_offset/16],(dst_offset%16)*sizeof(dentry_t),sizeof(dentry_t));
+    uint32_t src_inode = get_final_ino(src_path,current_ino,0);
+    uint32_t dst_inode = get_final_ino(dst_path,current_ino,1);
+    inode_t src_file = get_inode(src_inode);
+    inode_t dst_directory = get_inode(dst_inode);
+    dentry_t new_dentry;
+    new_dentry.ino = src_inode;
+    new_dentry.type = INO_LINK;
+    strcpy(new_dentry.name,dst_path);
+    strcpy(new_dentry.dst_name,src_path);
+    if (dst_directory.file_num%16==0) dst_directory.direct_index[dst_directory.file_num/16] = alloc_sector();
+    sd_write_offset(&new_dentry,dst_directory.direct_index[dst_directory.file_num/16],dst_directory.file_num%16*superblock.dentry_size,superblock.dentry_size);
+    dst_directory.file_num++;
+    dst_directory.modify_time = get_timer();
+    dst_directory.nlinks++;
+    dst_directory.used_size++;
+    src_file.nlinks++;
+    reflush_inode(&src_file);
+    reflush_inode(&dst_directory);
     return 0;  // do_ln succeeds 
 }
 
@@ -486,7 +476,7 @@ int get_son_inode(char *path, inode_t *father_node)
     }
     return -1;
 }
-uint32_t get_final_ino(char *path, uint32_t ino)
+uint32_t get_final_ino(char *path, uint32_t ino,uint32_t offset)
 {
     // seperate path
     char argv[10][20];
@@ -506,6 +496,9 @@ uint32_t get_final_ino(char *path, uint32_t ino)
     }
     strncpy(argv[argc++],path+start,i-start);
     if (len==0) argc--;
+    // use for ln
+    strcpy(path,argv[argc-1]);
+    argc-=offset;
     // get final inode
     int ino_num = ino;
     inode_t temp_node = get_inode(ino_num);

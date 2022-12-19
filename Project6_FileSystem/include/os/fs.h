@@ -68,13 +68,15 @@ typedef struct superblock_t{
 typedef enum ino_type{
     INO_DIR,
     INO_FILE,
+    INO_LINK,
 } ino_type_t;
 
 typedef struct dentry_t{
     // TODO [P6-task1]: Implement the data structure of directory entry
     uint32_t ino;
     ino_type_t type;
-    char name[32 - 4 - 4];
+    char name[12];
+    char dst_name[12];
 } dentry_t;
 
 typedef enum ino_access{
@@ -161,7 +163,7 @@ extern void init_root_dir(void);
 extern inode_t get_inode(uint32_t ino);
 extern uint32_t get_father_ino(uint32_t ino);
 extern int get_son_inode(char *path, inode_t *father_node);
-extern uint32_t get_final_ino(char *path, uint32_t ino);
+extern uint32_t get_final_ino(char *path, uint32_t ino,uint32_t offset);
 
 extern void set_father_dir(inode_t *father_node, char *name, inode_t *son_inode);
 extern int remove_son_dir(inode_t *father_node, char *name,ino_type_t type);

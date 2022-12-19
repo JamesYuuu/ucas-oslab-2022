@@ -11,12 +11,14 @@ int main(void)
     // write 'hello world!' * 10
     for (int i = 0; i < 10; i++)
     {
+        sys_lseek(fd,i*1024*1024,SEEK_SET);
         sys_fwrite(fd, "hello world!\n", 13);
     }
-    sys_lseek(fd,0,SEEK_SET);
+
     // read
     for (int i = 0; i < 10; i++)
     {
+        sys_lseek(fd,i*1024*1024,SEEK_SET);
         sys_fread(fd, buff, 13);
         for (int j = 0; j < 13; j++)
         {
