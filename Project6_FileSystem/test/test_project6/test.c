@@ -98,7 +98,6 @@ int main(int argc, char *argv[])
     //     else father_process();
 
     pthread_t a;
-    pthread_t b;
 
     pthread_create(&a,father_process,NULL);
     child_process();
