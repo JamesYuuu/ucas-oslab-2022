@@ -287,7 +287,9 @@ int do_rm(char *path)
 {
     // TODO [P6-task2]: Implement do_rm
     inode_t father_node = get_inode(current_ino);
-    return remove_son_dir(&father_node,path,INO_FILE);  // do_rm succeeds 
+    int file_result = remove_son_dir(&father_node,path,INO_FILE);  // do_rm succeeds 
+    int link_result = remove_son_dir(&father_node,path,INO_LINK);  // do_rm succeeds
+    return link_result == -1 && file_result == -1 ? -1 : 0;
 }
 
 int do_lseek(int fd, int offset, int whence)
