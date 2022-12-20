@@ -204,7 +204,7 @@ int do_fread(int fd, char *buff, int length)
     int end_sector = (fdesc_array[fd].offset+real_length)/SECTOR_SIZE;
 
     int offset_buff, offset_file_buff, copy_length;
-    // currently not consider large file
+
     for (int i=start_sector;i<=end_sector;i++)
     {
         unsigned int block_id = get_block_id(&file,i);
@@ -231,7 +231,7 @@ int do_fwrite(int fd, char *buff, int length)
     int end_sector = (fdesc_array[fd].offset+length)/SECTOR_SIZE;
 
     int offset_buff, offset_file_buff, copy_length;
-    // currently not consider large file
+
     for (int i=start_sector;i<=end_sector;i++)
     {
         unsigned int block_id = get_block_id(&file,i);
@@ -266,18 +266,22 @@ int do_ln(char *src_path, char *dst_path)
     uint32_t dst_inode = get_final_ino(dst_path,current_ino,1);
     inode_t src_file = get_inode(src_inode);
     inode_t dst_directory = get_inode(dst_inode);
+    // set new dentry
     dentry_t new_dentry;
     new_dentry.ino = src_inode;
     new_dentry.type = INO_LINK;
     strcpy(new_dentry.name,dst_path);
     strcpy(new_dentry.dst_name,src_path);
+    // set destination directory
     if (dst_directory.file_num%16==0) dst_directory.direct_index[dst_directory.file_num/16] = alloc_sector();
     sd_write_offset(&new_dentry,dst_directory.direct_index[dst_directory.file_num/16],dst_directory.file_num%16*superblock.dentry_size,superblock.dentry_size);
     dst_directory.file_num++;
     dst_directory.modify_time = get_timer();
     dst_directory.nlinks++;
     dst_directory.used_size++;
+    // set source file
     src_file.nlinks++;
+    // reflush inode
     reflush_inode(&src_file);
     reflush_inode(&dst_directory);
     return 0;  // do_ln succeeds 
